@@ -20,8 +20,8 @@ export function PlayerHeader({
   return (
     <header className="sticky top-0 z-30 border-b-2 border-cyan-900/80 bg-navy-deep/95 px-2 py-2 backdrop-blur-sm">
       <div className="mx-auto flex max-w-lg items-center gap-2">
-        <div className="pixel-frame flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden bg-navy">
-          <PixelAvatar id={hero.avatar} size={40} />
+        <div className="pixel-frame flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden bg-navy">
+          <PixelAvatar id={hero.avatar} size={48} />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
