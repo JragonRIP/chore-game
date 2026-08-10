@@ -1,6 +1,6 @@
 "use client";
 
-import { AVATARS } from "@/lib/quests";
+import { PixelAvatar } from "@/components/PixelAvatar";
 import type { GameState } from "@/lib/types";
 
 export function PlayerHeader({
@@ -15,14 +15,13 @@ export function PlayerHeader({
   onLevelTap: () => void;
 }) {
   const hero = state.hero!;
-  const avatar = AVATARS.find((a) => a.id === hero.avatar);
   const pct = Math.min(100, Math.round((state.xp / xpNeeded) * 100));
 
   return (
     <header className="sticky top-0 z-30 border-b-2 border-cyan-900/80 bg-navy-deep/95 px-2 py-2 backdrop-blur-sm">
       <div className="mx-auto flex max-w-lg items-center gap-2">
-        <div className="pixel-frame flex h-11 w-11 shrink-0 items-center justify-center bg-navy text-xl">
-          {avatar?.emoji ?? "⚔️"}
+        <div className="pixel-frame flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden bg-navy">
+          <PixelAvatar id={hero.avatar} size={40} />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">

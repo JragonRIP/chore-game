@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PixelAvatar } from "@/components/PixelAvatar";
 import { AVATARS } from "@/lib/quests";
 import type { AvatarId } from "@/lib/types";
 
@@ -11,6 +12,7 @@ export function HeroCreate({
 }) {
   const [name, setName] = useState("");
   const [avatar, setAvatar] = useState<AvatarId>("knight");
+  const selected = AVATARS.find((a) => a.id === avatar);
 
   return (
     <div className="flex min-h-dvh flex-col bg-navy px-3 py-4 text-cyan-50">
@@ -19,10 +21,10 @@ export function HeroCreate({
           Create Your Hero
         </h1>
         <p className="mt-2 text-sm text-cyan-100/80">
-          Choose a champion and claim your name in the realm.
+          Tap a champion, then name your legend.
         </p>
 
-        <label className="mt-5 block font-pixel text-[10px] text-cyan-300">
+        <label className="mt-4 block font-pixel text-[10px] text-cyan-300">
           Hero Name
           <input
             value={name}
@@ -33,34 +35,54 @@ export function HeroCreate({
           />
         </label>
 
-        <p className="mt-5 font-pixel text-[10px] text-cyan-300">Avatar</p>
-        <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <p className="mt-4 font-pixel text-[10px] text-cyan-300">
+          Choose Avatar
+        </p>
+
+        <div
+          className="mt-2 grid grid-cols-3 gap-2"
+          role="listbox"
+          aria-label="Hero avatars"
+        >
           {AVATARS.map((a) => {
-            const selected = avatar === a.id;
+            const isSelected = avatar === a.id;
             return (
               <button
                 key={a.id}
                 type="button"
+                role="option"
+                aria-selected={isSelected}
                 onClick={() => setAvatar(a.id)}
-                className={`pixel-panel flex min-h-16 items-center gap-3 p-3 text-left transition ${
-                  selected ? "ring-2 ring-gold" : "opacity-90"
+                className={`pixel-panel flex min-h-[7.5rem] flex-col items-center justify-between gap-1 p-2 transition active:scale-[0.97] ${
+                  isSelected
+                    ? "border-gold shadow-[0_0_0_2px_#fbbf24] ring-0"
+                    : "opacity-85 hover:opacity-100"
                 }`}
               >
-                <span className="text-3xl" aria-hidden>
-                  {a.emoji}
-                </span>
-                <span>
-                  <span className="block font-pixel text-[10px] text-gold">
-                    {a.name}
-                  </span>
-                  <span className="mt-1 block text-xs text-cyan-100/75">
-                    {a.blurb}
-                  </span>
+                <div
+                  className={`flex flex-1 items-center justify-center rounded-sm ${
+                    isSelected ? "bg-navy-deep" : "bg-navy/60"
+                  }`}
+                >
+                  <PixelAvatar id={a.id} size={72} />
+                </div>
+                <span
+                  className={`font-pixel text-center text-[8px] leading-tight sm:text-[9px] ${
+                    isSelected ? "text-gold" : "text-cyan-100"
+                  }`}
+                >
+                  {a.name}
                 </span>
               </button>
             );
           })}
         </div>
+
+        {selected && (
+          <p className="mt-3 text-center text-sm text-cyan-100/80">
+            {selected.blurb}
+          </p>
+        )}
 
         <button
           type="button"
