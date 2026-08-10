@@ -9,6 +9,7 @@ import {
   SLOTS,
   getSetPieces,
 } from "@/lib/gear";
+import { HeroSprite } from "@/components/HeroSprite";
 import { PixelGearIcon, RarityBadge } from "@/components/PixelGearIcon";
 import type { GameState, GearId, Slot } from "@/lib/types";
 
@@ -24,6 +25,7 @@ export function Armory({
   onUnequip: (slot: Slot) => void;
 }) {
   const [slotFilter, setSlotFilter] = useState<Slot | "all">("all");
+  const hero = state.hero!;
 
   const owned = useMemo(
     () =>
@@ -38,8 +40,30 @@ export function Armory({
     <div className="mx-auto w-full max-w-lg px-2 pb-4 pt-3">
       <h2 className="font-pixel text-xs text-gold sm:text-sm">Armory</h2>
       <p className="mt-1 text-sm text-cyan-100/75">
-        Equip gear for XP & coin bonuses. Complete sets for extra power.
+        Equip gear and watch it appear on your hero.
       </p>
+
+      <div className="pixel-panel mt-3 flex items-center gap-3 p-3">
+        <div className="pixel-frame flex h-28 w-28 shrink-0 items-center justify-center bg-navy sm:h-32 sm:w-32">
+          <HeroSprite
+            avatar={hero.avatar}
+            equipped={state.equipped}
+            size={120}
+          />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="font-pixel text-[10px] text-gold">{hero.name}</p>
+          <p className="mt-1 text-xs text-cyan-200/75">
+            Tap Equip on gear below — helmet, armor, boots, and weapons layer
+            onto your sprite.
+          </p>
+          {activeSetId && (
+            <p className="mt-2 font-pixel text-[9px] text-lime-xp">
+              Set bonus: {GEAR_SETS.find((s) => s.id === activeSetId)?.name}
+            </p>
+          )}
+        </div>
+      </div>
 
       <div className="mt-3 grid grid-cols-5 gap-1.5">
         {SLOTS.map((slot) => {
@@ -66,13 +90,6 @@ export function Armory({
           );
         })}
       </div>
-
-      {activeSetId && (
-        <p className="mt-2 font-pixel text-[9px] text-lime-xp">
-          Set bonus active:{" "}
-          {GEAR_SETS.find((s) => s.id === activeSetId)?.name}
-        </p>
-      )}
 
       <h3 className="mt-4 font-pixel text-[10px] text-cyan-300">Set Hunt</h3>
       <div className="mt-2 flex flex-col gap-2">

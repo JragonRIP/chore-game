@@ -53,7 +53,7 @@ export function HeroCreate({
                 role="option"
                 aria-selected={isSelected}
                 onClick={() => setAvatar(a.id)}
-                className={`pixel-panel flex min-h-[9rem] flex-col items-center justify-between gap-1 p-2 transition active:scale-[0.97] ${
+                className={`pixel-panel flex min-h-[10rem] flex-col items-center justify-between gap-1 p-2 transition active:scale-[0.97] ${
                   isSelected
                     ? "border-gold shadow-[0_0_0_2px_#fbbf24] ring-0"
                     : "opacity-85 hover:opacity-100"
@@ -64,7 +64,7 @@ export function HeroCreate({
                     isSelected ? "bg-navy-deep" : "bg-navy/60"
                   }`}
                 >
-                  <PixelAvatar id={a.id} size={96} />
+                  <PixelAvatar id={a.id} size={112} />
                 </div>
                 <span
                   className={`font-pixel text-center text-[8px] leading-tight sm:text-[9px] ${
