@@ -1,0 +1,206 @@
+import type { AvatarId, Quest, QuestCategory } from "./types";
+
+export const QUEST_CATEGORIES: Array<"All Quests" | QuestCategory> = [
+  "All Quests",
+  "Bedroom",
+  "Pets",
+  "School Prep",
+  "Kitchen",
+  "Outdoor",
+];
+
+export const AVATARS: Array<{
+  id: AvatarId;
+  name: string;
+  blurb: string;
+  emoji: string;
+}> = [
+  {
+    id: "knight",
+    name: "Knight",
+    blurb: "Shield raised. Chores conquered.",
+    emoji: "🛡️",
+  },
+  {
+    id: "wizard",
+    name: "Wizard",
+    blurb: "Spells of tidy magic.",
+    emoji: "🔮",
+  },
+  {
+    id: "archer",
+    name: "Archer",
+    blurb: "Quick aim. Clean shot.",
+    emoji: "🏹",
+  },
+  {
+    id: "dragon-rider",
+    name: "Dragon Rider",
+    blurb: "Soar above the mess.",
+    emoji: "🐉",
+  },
+  {
+    id: "berserker",
+    name: "Berserker",
+    blurb: "Raw power. Absolute tidy rage.",
+    emoji: "🪓",
+  },
+];
+
+export const STORY_PANELS = [
+  {
+    title: "The Realm Grows Dim",
+    text: "In the Kingdom of Home, shadows of clutter creep across every hall. Dust goblins laugh. Sock dragons nest in corners. The old heroes… have vanished.",
+  },
+  {
+    title: "A Call From the Vault",
+    text: "Deep beneath the house, the Treasure Vault stirs. It needs a champion — someone brave enough to turn everyday chores into legendary raids.",
+  },
+  {
+    title: "Quests Await",
+    text: "Each chore is a quest. Complete them to earn XP, gold, and chests of forgotten armor forged for heroes like you.",
+  },
+  {
+    title: "Gear of the Ancients",
+    text: "Collect rare sets. Equip helmets, blades, and boots. Hunt Relics so powerful only the tidiest champions ever see them.",
+  },
+  {
+    title: "Your Legend Begins",
+    text: "The Quest Board is open. Choose your hero. Level up. Open chests. Become the champion this realm has been waiting for.",
+  },
+];
+
+export const QUESTS: Quest[] = [
+  {
+    id: "bed-castle",
+    name: "Make Your Bed Castle",
+    category: "Bedroom",
+    difficulty: "quick",
+    minutes: 2,
+    xp: 50,
+    coins: 10,
+    goal: "Straighten sheets, fluff the pillow, and smooth the blankets like a royal bedchamber.",
+    icon: "🛏️",
+  },
+  {
+    id: "sock-dragon",
+    name: "Sock Dragon Taming",
+    category: "Bedroom",
+    difficulty: "quick",
+    minutes: 3,
+    xp: 40,
+    coins: 8,
+    goal: "Gather stray socks and put them in the hamper — or match a brave pair!",
+    icon: "🧦",
+  },
+  {
+    id: "toy-raid",
+    name: "Toy Realm Cleanup Raid",
+    category: "Bedroom",
+    difficulty: "epic",
+    minutes: 10,
+    xp: 100,
+    coins: 25,
+    goal: "Put toys back in their homes so the floor is clear for adventure.",
+    icon: "🧸",
+  },
+  {
+    id: "feed-beast",
+    name: "Feed the Loyal Beast",
+    category: "Pets",
+    difficulty: "quick",
+    minutes: 2,
+    xp: 50,
+    coins: 12,
+    goal: "Give your pet food and fresh water like a true companion.",
+    icon: "🐾",
+  },
+  {
+    id: "pet-patrol",
+    name: "Pet Path Patrol",
+    category: "Pets",
+    difficulty: "quick",
+    minutes: 5,
+    xp: 60,
+    coins: 15,
+    goal: "A short walk, playtime, or gentle brushing — keep your beast happy.",
+    icon: "🐕",
+  },
+  {
+    id: "backpack",
+    name: "Backpack of Holding",
+    category: "School Prep",
+    difficulty: "quick",
+    minutes: 3,
+    xp: 45,
+    coins: 10,
+    goal: "Pack homework, books, and tomorrow’s needs into your bag.",
+    icon: "🎒",
+  },
+  {
+    id: "outfit",
+    name: "Outfit of Power",
+    category: "School Prep",
+    difficulty: "quick",
+    minutes: 2,
+    xp: 35,
+    coins: 8,
+    goal: "Lay out clothes and shoes for the next day.",
+    icon: "👕",
+  },
+  {
+    id: "lunch-scroll",
+    name: "Lunch Scroll Prep",
+    category: "School Prep",
+    difficulty: "quick",
+    minutes: 5,
+    xp: 55,
+    coins: 12,
+    goal: "Help pack or set up lunch and snack for school.",
+    icon: "🍎",
+  },
+  {
+    id: "dish-knight",
+    name: "Dish Knight Duty",
+    category: "Kitchen",
+    difficulty: "quick",
+    minutes: 5,
+    xp: 70,
+    coins: 18,
+    goal: "Clear your dishes to the sink or dishwasher.",
+    icon: "🍽️",
+  },
+  {
+    id: "crumb-goblin",
+    name: "Crumb Goblin Sweep",
+    category: "Kitchen",
+    difficulty: "quick",
+    minutes: 3,
+    xp: 40,
+    coins: 10,
+    goal: "Wipe the table or counter after a meal.",
+    icon: "🧹",
+  },
+  {
+    id: "trash-titan",
+    name: "Trash Titan Banishment",
+    category: "Outdoor",
+    difficulty: "quick",
+    minutes: 3,
+    xp: 45,
+    coins: 12,
+    goal: "Take out the trash or recycling bin.",
+    icon: "🗑️",
+  },
+  {
+    id: "yard-scout",
+    name: "Yard Realm Scout",
+    category: "Outdoor",
+    difficulty: "epic",
+    minutes: 10,
+    xp: 90,
+    coins: 20,
+    goal: "Quick outdoor tidy: toys in, leaves and sticks cleared in your zone.",
+    icon: "🌳",
+  },
+];
