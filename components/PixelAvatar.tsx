@@ -3,7 +3,7 @@
 import { HeroSprite } from "@/components/HeroSprite";
 import type { AvatarId } from "@/lib/types";
 
-/** Character-select / unequipped preview — 64×64 base body. */
+/** Character-select preview using the real avatar art. */
 export function PixelAvatar({
   id,
   size = 128,
@@ -13,5 +13,12 @@ export function PixelAvatar({
   size?: number;
   className?: string;
 }) {
-  return <HeroSprite avatar={id} size={size} className={className} />;
+  return (
+    <HeroSprite
+      avatar={id}
+      size={size}
+      className={className}
+      showGearBadges={false}
+    />
+  );
 }
