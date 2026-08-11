@@ -349,6 +349,17 @@ export const QUESTS: Quest[] = [
     icon: "🧹",
   },
   {
+    id: "kitchen-table-shine",
+    name: "Kitchen Table Shine",
+    category: "Cleaning",
+    difficulty: "quick",
+    minutes: 4,
+    xp: 45,
+    coins: 10,
+    goal: "Clear the kitchen table, then wipe it clean until it shines.",
+    icon: "🧽",
+  },
+  {
     id: "dust-low",
     name: "Dust Goblin Banish",
     category: "Cleaning",
