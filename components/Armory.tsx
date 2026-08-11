@@ -10,7 +10,7 @@ import {
   getSetPieces,
 } from "@/lib/gear";
 import { HeroSprite } from "@/components/HeroSprite";
-import { PetIcon } from "@/components/PetIcon";
+import { PetIcon, PetSprite } from "@/components/PetIcon";
 import { GearIcon, RarityBadge } from "@/components/PixelGearIcon";
 import { PET_BY_ID } from "@/lib/pets";
 import type { GameState, GearId, Slot } from "@/lib/types";
@@ -109,8 +109,8 @@ export function Armory({
               showGearBadges={false}
             />
             {equippedPet && (
-              <div className="absolute bottom-2 right-2">
-                <PetIcon pet={equippedPet} size={44} />
+              <div className="absolute bottom-1 right-1">
+                <PetSprite species={equippedPet.species} size={56} />
               </div>
             )}
           </div>

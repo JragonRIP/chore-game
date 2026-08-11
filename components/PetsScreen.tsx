@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { HeroSprite } from "@/components/HeroSprite";
-import { PetIcon } from "@/components/PetIcon";
+import { PetIcon, PetSprite } from "@/components/PetIcon";
 import { RarityBadge } from "@/components/PixelGearIcon";
 import { PET_BY_ID, PET_TRAIT_LABELS } from "@/lib/pets";
 import type { GameState, PetId } from "@/lib/types";
@@ -63,8 +63,8 @@ export function PetsScreen({
             showGearBadges={false}
           />
           {equipped && (
-            <div className="absolute bottom-3 right-[18%] loot-pop">
-              <PetIcon pet={equipped} size={56} />
+            <div className="absolute bottom-2 right-[12%] loot-pop">
+              <PetSprite species={equipped.species} size={72} />
             </div>
           )}
         </div>
