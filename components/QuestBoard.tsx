@@ -31,87 +31,91 @@ export function QuestBoard({
   }, [category, query]);
 
   return (
-    <div className="mx-auto w-full max-w-lg px-2 pb-4 pt-3">
-      <h2 className="font-pixel text-xs text-gold sm:text-sm">Quest Board</h2>
+    <div className="mx-auto w-full max-w-lg px-3 pb-5 pt-4">
+      <h2 className="font-display text-2xl text-ink">Quest Board</h2>
+      <p className="mt-0.5 text-sm text-ink-soft">Pick a chore. Become a legend.</p>
+
       <input
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Search quests…"
-        className="pixel-input mt-3 w-full min-h-11 text-sm"
+        className="field mt-4"
       />
 
-      <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="hide-scrollbar mt-3 flex gap-2 overflow-x-auto pb-1">
         {QUEST_CATEGORIES.map((c) => (
           <button
             key={c}
             type="button"
             onClick={() => setCategory(c)}
-            className={`pixel-chip shrink-0 min-h-9 px-3 text-[10px] ${
-              category === c
-                ? "border-gold bg-gold/15 text-gold"
-                : "border-cyan-700 text-cyan-200"
-            }`}
+            className={`chip shrink-0 ${category === c ? "chip-active" : ""}`}
           >
             {c}
           </button>
         ))}
       </div>
 
-      <div className="mt-3 flex flex-col gap-3">
-        {filtered.map((quest) => {
+      <div className="mt-4 flex flex-col gap-3.5">
+        {filtered.map((quest, i) => {
           const done = state.completedToday.includes(quest.id);
           const active = state.activeQuestIds.includes(quest.id);
           return (
-            <article key={quest.id} className="pixel-panel overflow-hidden">
-              <div className="flex items-center justify-center bg-navy-deep py-5 text-5xl">
-                {quest.icon}
-              </div>
-              <div className="p-3">
-                <h3 className="font-pixel text-[11px] leading-5 text-cyan-50">
-                  {quest.name}
-                </h3>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  <span className="pixel-chip border-lime-xp text-[9px] text-lime-xp">
-                    ⭐ +{quest.xp} XP
-                  </span>
-                  <span className="pixel-chip border-gold text-[9px] text-gold">
-                    🪙 +{quest.coins}
-                  </span>
+            <article
+              key={quest.id}
+              className="surface-strong overflow-hidden rise-in"
+              style={{ animationDelay: `${Math.min(i, 6) * 40}ms` }}
+            >
+              <div className="relative flex items-center justify-center bg-gradient-to-br from-sky-2 via-white to-teal/10 py-7">
+                <span className="text-5xl drop-shadow-sm">{quest.icon}</span>
+                <div className="absolute right-3 top-3">
                   <span
-                    className={`pixel-chip text-[9px] ${
+                    className={`chip ${
                       quest.difficulty === "quick"
-                        ? "border-emerald-400 text-emerald-300"
-                        : "border-sky-400 text-sky-300"
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                        : "border-sky-200 bg-sky-50 text-sky-700"
                     }`}
                   >
                     {quest.difficulty === "quick"
-                      ? `🟢 Quick Dash (${quest.minutes}m)`
-                      : `🔵 Epic Raid (${quest.minutes}m)`}
+                      ? `Quick · ${quest.minutes}m`
+                      : `Epic · ${quest.minutes}m`}
                   </span>
                 </div>
-                <p className="mt-2 text-sm leading-snug text-cyan-100/80">
+              </div>
+              <div className="p-4">
+                <h3 className="font-display text-lg leading-snug text-ink">
+                  {quest.name}
+                </h3>
+                <div className="mt-2.5 flex flex-wrap gap-2">
+                  <span className="chip border-emerald-200 bg-emerald-50 text-emerald-700">
+                    +{quest.xp} XP
+                  </span>
+                  <span className="chip border-amber-200 bg-amber-50 text-amber-800">
+                    +{quest.coins} Gold
+                  </span>
+                </div>
+                <p className="mt-3 text-sm leading-relaxed text-ink-soft">
                   {quest.goal}
                 </p>
-                <div className="mt-3">
+                <div className="mt-4">
                   {done ? (
-                    <p className="font-pixel text-[10px] text-lime-xp">
-                      ✓ Cleared today — returns at midnight
+                    <p className="rounded-xl bg-xp/10 px-3 py-3 text-center text-sm font-semibold text-emerald-700">
+                      Cleared today — returns at midnight
                     </p>
                   ) : active ? (
                     <button
                       type="button"
                       onClick={() => onComplete(quest.id)}
-                      className="pixel-btn pixel-btn-primary min-h-12 w-full font-pixel text-[10px]"
+                      className="btn btn-secondary w-full"
                     >
-                      Complete Quest!
+                      Complete Quest
                     </button>
                   ) : (
                     <button
                       type="button"
                       onClick={() => onStart(quest.id)}
-                      className="pixel-btn pixel-btn-primary min-h-12 w-full font-pixel text-[10px]"
+                      className="btn btn-primary w-full"
                     >
-                      ⚔️ Start Quest!
+                      Start Quest
                     </button>
                   )}
                 </div>

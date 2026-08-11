@@ -2,11 +2,11 @@
 
 import type { TabId } from "@/lib/types";
 
-const TABS: Array<{ id: TabId; label: string; icon: string }> = [
-  { id: "quest", label: "Quest", icon: "⚔️" },
-  { id: "vault", label: "Vault", icon: "💎" },
-  { id: "armory", label: "Armory", icon: "🛡️" },
-  { id: "store", label: "Store", icon: "🏪" },
+const TABS: Array<{ id: TabId; label: string; glyph: string }> = [
+  { id: "quest", label: "Quest", glyph: "Q" },
+  { id: "vault", label: "Vault", glyph: "V" },
+  { id: "armory", label: "Armory", glyph: "A" },
+  { id: "store", label: "Store", glyph: "S" },
 ];
 
 export function BottomNav({
@@ -17,8 +17,8 @@ export function BottomNav({
   onChange: (t: TabId) => void;
 }) {
   return (
-    <nav className="sticky bottom-0 z-30 border-t-2 border-cyan-900/80 bg-navy-deep/95 pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-1 backdrop-blur-sm">
-      <div className="mx-auto grid max-w-lg grid-cols-4 gap-0.5 px-1">
+    <nav className="glass-bar sticky bottom-0 z-30 border-t pb-[max(0.4rem,env(safe-area-inset-bottom))] pt-1.5">
+      <div className="mx-auto grid max-w-lg grid-cols-4 gap-1 px-2">
         {TABS.map((t) => {
           const active = tab === t.id;
           return (
@@ -26,16 +26,20 @@ export function BottomNav({
               key={t.id}
               type="button"
               onClick={() => onChange(t.id)}
-              className={`flex min-h-14 flex-col items-center justify-center gap-0.5 px-1 ${
-                active ? "text-gold" : "text-cyan-200/60"
+              className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl transition ${
+                active
+                  ? "bg-teal text-white shadow-md shadow-teal/25"
+                  : "text-ink-soft hover:bg-white/50"
               }`}
             >
-              <span className="text-lg" aria-hidden>
-                {t.icon}
+              <span
+                className={`flex h-7 w-7 items-center justify-center rounded-xl text-xs font-bold ${
+                  active ? "bg-white/20" : "bg-ink/5"
+                }`}
+              >
+                {t.glyph}
               </span>
-              <span className="font-pixel text-[8px] leading-none sm:text-[9px]">
-                {t.label}
-              </span>
+              <span className="text-[11px] font-semibold">{t.label}</span>
             </button>
           );
         })}

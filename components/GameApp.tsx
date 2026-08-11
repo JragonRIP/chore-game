@@ -20,8 +20,8 @@ export function GameApp() {
 
   if (!g.state) {
     return (
-      <div className="flex min-h-dvh items-center justify-center bg-navy font-pixel text-[10px] text-cyan-200">
-        Loading realm…
+      <div className="realm-bg flex min-h-dvh items-center justify-center">
+        <p className="font-display text-lg text-teal-deep">Loading realm…</p>
       </div>
     );
   }
@@ -35,8 +35,7 @@ export function GameApp() {
   }
 
   return (
-    <div className="flex min-h-dvh flex-col bg-navy text-cyan-50">
-      <div className="pointer-events-none fixed inset-0 bg-pixel-grid opacity-40" />
+    <div className="realm-bg relative flex min-h-dvh flex-col text-ink">
       <div className="relative flex min-h-dvh flex-1 flex-col">
         <PlayerHeader
           state={g.state}

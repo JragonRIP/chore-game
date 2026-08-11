@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { PixelGearIcon } from "@/components/PixelGearIcon";
+import { GearIcon } from "@/components/PixelGearIcon";
 import { AVATAR_IMAGES } from "@/lib/avatars";
 import { GEAR_BY_ID, SLOTS } from "@/lib/gear";
 import type { AvatarId, EquippedMap } from "@/lib/types";
@@ -20,12 +20,7 @@ export function HeroSprite({
   showGearBadges?: boolean;
 }) {
   const src = AVATAR_IMAGES[avatar];
-  const equippedList = SLOTS.map((slot) => {
-    const id = equipped?.[slot];
-    return id ? GEAR_BY_ID[id] : null;
-  }).filter(Boolean);
-
-  const badgeSize = Math.max(14, Math.round(size * 0.22));
+  const badgeSize = Math.max(16, Math.round(size * 0.2));
 
   return (
     <div
@@ -38,55 +33,31 @@ export function HeroSprite({
         alt=""
         width={size}
         height={size}
-        className="h-full w-full object-contain"
-        style={{ imageRendering: "pixelated" }}
+        className="h-full w-full object-contain drop-shadow-md"
         unoptimized
         priority
       />
-      {showGearBadges && equippedList.length > 0 && (
-        <div className="pointer-events-none absolute inset-0">
-          {equipped?.helmet && GEAR_BY_ID[equipped.helmet] && (
-            <div className="absolute left-1/2 top-0 -translate-x-1/2">
-              <PixelGearIcon
-                gear={GEAR_BY_ID[equipped.helmet]!}
-                size={badgeSize}
-              />
+      {showGearBadges &&
+        SLOTS.map((slot) => {
+          const id = equipped?.[slot];
+          const gear = id ? GEAR_BY_ID[id] : null;
+          if (!gear) return null;
+          const pos =
+            slot === "helmet"
+              ? "left-1/2 top-0 -translate-x-1/2"
+              : slot === "weapon"
+                ? "right-0 top-[30%]"
+                : slot === "chestplate"
+                  ? "left-0 top-[38%]"
+                  : slot === "boots"
+                    ? "bottom-0 left-1/2 -translate-x-1/2"
+                    : "bottom-0 right-0";
+          return (
+            <div key={slot} className={`absolute ${pos}`}>
+              <GearIcon gear={gear} size={badgeSize} />
             </div>
-          )}
-          {equipped?.weapon && GEAR_BY_ID[equipped.weapon] && (
-            <div className="absolute right-0 top-1/3">
-              <PixelGearIcon
-                gear={GEAR_BY_ID[equipped.weapon]!}
-                size={badgeSize}
-              />
-            </div>
-          )}
-          {equipped?.chestplate && GEAR_BY_ID[equipped.chestplate] && (
-            <div className="absolute bottom-1/3 left-0">
-              <PixelGearIcon
-                gear={GEAR_BY_ID[equipped.chestplate]!}
-                size={badgeSize}
-              />
-            </div>
-          )}
-          {equipped?.boots && GEAR_BY_ID[equipped.boots] && (
-            <div className="absolute bottom-0 left-1/2 -translate-x-1/2">
-              <PixelGearIcon
-                gear={GEAR_BY_ID[equipped.boots]!}
-                size={badgeSize}
-              />
-            </div>
-          )}
-          {equipped?.leggings && GEAR_BY_ID[equipped.leggings] && (
-            <div className="absolute bottom-0 right-0">
-              <PixelGearIcon
-                gear={GEAR_BY_ID[equipped.leggings]!}
-                size={badgeSize}
-              />
-            </div>
-          )}
-        </div>
-      )}
+          );
+        })}
     </div>
   );
 }

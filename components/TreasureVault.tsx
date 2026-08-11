@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { GEAR_BY_ID } from "@/lib/gear";
 import { QUESTS } from "@/lib/quests";
 import { xpToNextLevel } from "@/lib/math";
-import { PixelGearIcon, RarityBadge } from "@/components/PixelGearIcon";
+import { GearIcon, RarityBadge } from "@/components/PixelGearIcon";
 import type { GameState, QuestId } from "@/lib/types";
 
 type VaultFilter = "Active Quests" | "Done Today" | "Loot Unlocked";
@@ -43,16 +43,18 @@ export function TreasureVault({
   );
 
   return (
-    <div className="mx-auto w-full max-w-lg px-2 pb-4 pt-3">
-      <h2 className="font-pixel text-xs text-gold sm:text-sm">Treasure Vault</h2>
+    <div className="mx-auto w-full max-w-lg px-3 pb-5 pt-4">
+      <h2 className="font-display text-2xl text-ink">Treasure Vault</h2>
+      <p className="mt-0.5 text-sm text-ink-soft">Active quests, wins, and loot.</p>
+
       <input
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Filter vault…"
-        className="pixel-input mt-3 w-full min-h-11 text-sm"
+        className="field mt-4"
       />
 
-      <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="hide-scrollbar mt-3 flex gap-2 overflow-x-auto pb-1">
         {(
           ["Active Quests", "Done Today", "Loot Unlocked"] as VaultFilter[]
         ).map((f) => (
@@ -60,47 +62,47 @@ export function TreasureVault({
             key={f}
             type="button"
             onClick={() => setFilter(f)}
-            className={`pixel-chip shrink-0 min-h-9 px-3 text-[10px] ${
-              filter === f
-                ? "border-gold bg-gold/15 text-gold"
-                : "border-cyan-700 text-cyan-200"
-            }`}
+            className={`chip shrink-0 ${filter === f ? "chip-active" : ""}`}
           >
             {f}
           </button>
         ))}
       </div>
 
-      <div className="pixel-panel mt-3 p-3">
-        <p className="font-pixel text-[9px] text-cyan-300">Hero Level Progress</p>
-        <div className="mt-2 h-3 border border-cyan-800 bg-navy">
-          <div className="h-full bg-lime-xp" style={{ width: `${pct}%` }} />
+      <div className="surface mt-4 p-4">
+        <p className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
+          Level Progress
+        </p>
+        <div className="progress-track mt-2">
+          <div className="progress-fill" style={{ width: `${pct}%` }} />
         </div>
-        <p className="mt-1 text-[11px] text-cyan-100/70">
+        <p className="mt-2 text-sm text-ink-soft">
           Level {state.level} · {state.xp}/{xpNeeded} XP to next
         </p>
       </div>
 
       {filter === "Active Quests" && (
-        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
           {active.length === 0 && (
-            <p className="text-sm text-cyan-200/70">
+            <p className="text-sm text-ink-soft">
               No active quests. Start one from the Quest Board!
             </p>
           )}
           {active.map((q) => (
-            <article key={q.id} className="pixel-panel p-3">
-              <div className="flex items-start gap-2">
-                <span className="text-2xl">{q.icon}</span>
+            <article key={q.id} className="surface p-3.5">
+              <div className="flex items-start gap-3">
+                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-2/60 text-2xl">
+                  {q.icon}
+                </span>
                 <div className="min-w-0 flex-1">
-                  <h3 className="font-pixel text-[10px] leading-4 text-cyan-50">
-                    {q.name}
-                  </h3>
-                  <p className="mt-1 text-[10px] text-gold">★★★☆☆ in progress</p>
+                  <h3 className="font-display text-base text-ink">{q.name}</h3>
+                  <p className="mt-0.5 text-xs font-medium text-amber-700">
+                    In progress
+                  </p>
                   <button
                     type="button"
                     onClick={() => onComplete(q.id)}
-                    className="pixel-btn pixel-btn-primary mt-2 min-h-10 w-full font-pixel text-[9px]"
+                    className="btn btn-secondary mt-3 min-h-10 w-full text-sm"
                   >
                     Mark Complete
                   </button>
@@ -112,41 +114,37 @@ export function TreasureVault({
       )}
 
       {filter === "Done Today" && (
-        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
           {done.length === 0 && (
-            <p className="text-sm text-cyan-200/70">Nothing cleared yet today.</p>
+            <p className="text-sm text-ink-soft">Nothing cleared yet today.</p>
           )}
           {done.map((q) => (
-            <article key={q.id} className="pixel-panel p-3 opacity-90">
-              <div className="flex items-center gap-2">
-                <span className="pixel-frame flex h-6 w-6 items-center justify-center border-lime-xp text-lime-xp">
-                  ✓
-                </span>
-                <span className="text-xl">{q.icon}</span>
-                <h3 className="font-pixel text-[10px] text-cyan-50">{q.name}</h3>
-              </div>
+            <article key={q.id} className="surface flex items-center gap-3 p-3">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-xp/15 text-sm font-bold text-emerald-700">
+                ✓
+              </span>
+              <span className="text-xl">{q.icon}</span>
+              <h3 className="font-display text-sm text-ink">{q.name}</h3>
             </article>
           ))}
         </div>
       )}
 
       {filter === "Loot Unlocked" && (
-        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
           {loot.length === 0 && (
-            <p className="text-sm text-cyan-200/70">
+            <p className="text-sm text-ink-soft">
               Level up to open chests and fill your vault!
             </p>
           )}
           {loot.map((g, i) => (
             <article
               key={`${g.id}-${i}`}
-              className="pixel-panel flex items-center gap-2 p-2"
+              className="surface flex items-center gap-3 p-3"
             >
-              <PixelGearIcon gear={g} size={44} />
+              <GearIcon gear={g} size={48} />
               <div className="min-w-0">
-                <p className="truncate font-pixel text-[9px] text-cyan-50">
-                  {g.name}
-                </p>
+                <p className="truncate font-display text-sm text-ink">{g.name}</p>
                 <div className="mt-1">
                   <RarityBadge rarity={g.rarity} />
                 </div>

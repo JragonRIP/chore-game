@@ -15,32 +15,27 @@ export function HeroCreate({
   const selected = AVATARS.find((a) => a.id === avatar);
 
   return (
-    <div className="flex min-h-dvh flex-col bg-navy px-3 py-4 text-cyan-50">
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
-        <h1 className="font-pixel text-sm leading-7 text-gold">
-          Create Your Hero
-        </h1>
-        <p className="mt-2 text-sm text-cyan-100/80">
-          Tap a champion, then name your legend.
+    <div className="realm-bg relative flex min-h-dvh flex-col px-4 py-5 text-ink">
+      <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col">
+        <h1 className="font-display text-3xl text-ink">Create Your Hero</h1>
+        <p className="mt-1 text-ink-soft">
+          Choose a champion and claim your name in the realm.
         </p>
 
-        <label className="mt-4 block font-pixel text-[10px] text-cyan-300">
+        <label className="mt-5 block text-sm font-semibold text-ink-soft">
           Hero Name
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             maxLength={16}
             placeholder="Captain Tidytale"
-            className="pixel-input mt-2 w-full min-h-12 text-base"
+            className="field mt-2"
           />
         </label>
 
-        <p className="mt-4 font-pixel text-[10px] text-cyan-300">
-          Choose Avatar
-        </p>
-
+        <p className="mt-5 text-sm font-semibold text-ink-soft">Choose Avatar</p>
         <div
-          className="mt-2 grid grid-cols-3 gap-2"
+          className="mt-3 grid grid-cols-3 gap-2.5"
           role="listbox"
           aria-label="Hero avatars"
         >
@@ -53,22 +48,18 @@ export function HeroCreate({
                 role="option"
                 aria-selected={isSelected}
                 onClick={() => setAvatar(a.id)}
-                className={`pixel-panel flex min-h-[11rem] flex-col items-center justify-between gap-1 p-2 transition active:scale-[0.97] ${
+                className={`surface flex min-h-[9.5rem] flex-col items-center gap-2 p-2.5 transition duration-200 ${
                   isSelected
-                    ? "border-gold shadow-[0_0_0_2px_#fbbf24] ring-0"
-                    : "opacity-85 hover:opacity-100"
+                    ? "ring-2 ring-teal ring-offset-2 ring-offset-sky-1"
+                    : "opacity-90 hover:opacity-100"
                 }`}
               >
-                <div
-                  className={`flex flex-1 items-center justify-center rounded-sm ${
-                    isSelected ? "bg-navy-deep" : "bg-navy/60"
-                  }`}
-                >
-                  <PixelAvatar id={a.id} size={120} />
+                <div className="flex flex-1 items-center justify-center rounded-xl bg-gradient-to-b from-sky-2/50 to-transparent">
+                  <PixelAvatar id={a.id} size={88} />
                 </div>
                 <span
-                  className={`font-pixel text-center text-[8px] leading-tight sm:text-[9px] ${
-                    isSelected ? "text-gold" : "text-cyan-100"
+                  className={`font-display text-sm ${
+                    isSelected ? "text-teal-deep" : "text-ink"
                   }`}
                 >
                   {a.name}
@@ -79,7 +70,7 @@ export function HeroCreate({
         </div>
 
         {selected && (
-          <p className="mt-3 text-center text-sm text-cyan-100/80">
+          <p className="mt-4 text-center text-sm text-ink-soft rise-in">
             {selected.blurb}
           </p>
         )}
@@ -88,7 +79,7 @@ export function HeroCreate({
           type="button"
           disabled={!name.trim()}
           onClick={() => onCreate(name, avatar)}
-          className="pixel-btn pixel-btn-primary mt-auto min-h-12 w-full font-pixel text-[11px] disabled:opacity-40"
+          className="btn btn-primary mt-auto w-full text-base"
         >
           Enter the Quest Board
         </button>

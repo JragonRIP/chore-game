@@ -1,14 +1,13 @@
 import type { Metadata, Viewport } from "next";
-import { Press_Start_2P, Nunito } from "next/font/google";
+import { Fredoka, Outfit } from "next/font/google";
 import "./globals.css";
 
-const pixel = Press_Start_2P({
-  weight: "400",
+const display = Fredoka({
   subsets: ["latin"],
-  variable: "--font-pixel",
+  variable: "--font-display",
 });
 
-const body = Nunito({
+const body = Outfit({
   subsets: ["latin"],
   variable: "--font-body",
 });
@@ -16,23 +15,23 @@ const body = Nunito({
 export const metadata: Metadata = {
   title: "Daily Chore Treasure Quest",
   description:
-    "Turn everyday chores into an 8-bit fantasy adventure. Earn XP, open chests, and gear up!",
+    "Turn everyday chores into a magical adventure. Earn XP, open chests, and gear up!",
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
-  themeColor: "#0b1220",
+  themeColor: "#b8e4ef",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${pixel.variable} ${body.variable} h-full antialiased`}
+      className={`${display.variable} ${body.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-navy text-cyan-50">
+      <body className="flex min-h-full flex-col bg-sky-1 text-ink">
         {children}
       </body>
     </html>

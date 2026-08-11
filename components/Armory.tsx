@@ -10,7 +10,7 @@ import {
   getSetPieces,
 } from "@/lib/gear";
 import { HeroSprite } from "@/components/HeroSprite";
-import { PixelGearIcon, RarityBadge } from "@/components/PixelGearIcon";
+import { GearIcon, RarityBadge } from "@/components/PixelGearIcon";
 import type { GameState, GearId, Slot } from "@/lib/types";
 
 export function Armory({
@@ -37,14 +37,14 @@ export function Armory({
   );
 
   return (
-    <div className="mx-auto w-full max-w-lg px-2 pb-4 pt-3">
-      <h2 className="font-pixel text-xs text-gold sm:text-sm">Armory</h2>
-      <p className="mt-1 text-sm text-cyan-100/75">
-        Equip gear and watch it appear on your hero.
+    <div className="mx-auto w-full max-w-lg px-3 pb-5 pt-4">
+      <h2 className="font-display text-2xl text-ink">Armory</h2>
+      <p className="mt-0.5 text-sm text-ink-soft">
+        Equip gear for XP and coin bonuses.
       </p>
 
-      <div className="pixel-panel mt-3 flex items-center gap-3 p-3">
-        <div className="pixel-frame flex h-28 w-28 shrink-0 items-center justify-center bg-navy sm:h-32 sm:w-32">
+      <div className="surface-strong mt-4 flex items-center gap-4 p-4">
+        <div className="flex h-32 w-32 shrink-0 items-center justify-center rounded-3xl bg-gradient-to-br from-sky-2 to-white ring-1 ring-ink/5">
           <HeroSprite
             avatar={hero.avatar}
             equipped={state.equipped}
@@ -52,20 +52,19 @@ export function Armory({
           />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="font-pixel text-[10px] text-gold">{hero.name}</p>
-          <p className="mt-1 text-xs text-cyan-200/75">
-            Tap Equip on gear below — helmet, armor, boots, and weapons layer
-            onto your sprite.
+          <p className="font-display text-lg text-ink">{hero.name}</p>
+          <p className="mt-1 text-sm text-ink-soft">
+            Equip pieces below to power up your hero.
           </p>
           {activeSetId && (
-            <p className="mt-2 font-pixel text-[9px] text-lime-xp">
+            <p className="mt-2 rounded-xl bg-xp/10 px-2.5 py-1.5 text-xs font-bold text-emerald-700">
               Set bonus: {GEAR_SETS.find((s) => s.id === activeSetId)?.name}
             </p>
           )}
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-5 gap-1.5">
+      <div className="mt-4 grid grid-cols-5 gap-2">
         {SLOTS.map((slot) => {
           const id = state.equipped[slot];
           const gear = id ? GEAR_BY_ID[id] : null;
@@ -74,16 +73,16 @@ export function Armory({
               key={slot}
               type="button"
               onClick={() => (gear ? onUnequip(slot) : setSlotFilter(slot))}
-              className="pixel-panel flex flex-col items-center gap-1 p-1.5"
+              className="surface flex flex-col items-center gap-1.5 p-2"
             >
               {gear ? (
-                <PixelGearIcon gear={gear} size={40} />
+                <GearIcon gear={gear} size={40} />
               ) : (
-                <div className="flex h-10 w-10 items-center justify-center border border-dashed border-cyan-800 text-[9px] text-cyan-700">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-dashed border-ink/20 text-ink/30">
                   +
                 </div>
               )}
-              <span className="font-pixel text-[7px] text-cyan-300">
+              <span className="text-[10px] font-semibold text-ink-soft">
                 {SLOT_LABELS[slot].slice(0, 4)}
               </span>
             </button>
@@ -91,30 +90,31 @@ export function Armory({
         })}
       </div>
 
-      <h3 className="mt-4 font-pixel text-[10px] text-cyan-300">Set Hunt</h3>
-      <div className="mt-2 flex flex-col gap-2">
+      <h3 className="mt-5 font-display text-lg text-ink">Set Hunt</h3>
+      <div className="mt-2 flex flex-col gap-2.5">
         {GEAR_SETS.map((set) => {
           const pieces = getSetPieces(set.id);
           const ownedCount = pieces.filter((p) =>
             state.ownedGear.includes(p.id),
           ).length;
           return (
-            <div key={set.id} className="pixel-panel p-2">
+            <div key={set.id} className="surface p-3">
               <div className="flex items-center justify-between gap-2">
-                <p className="font-pixel text-[9px] text-cyan-50">{set.name}</p>
-                <p className="text-[10px] text-gold">
+                <p className="font-display text-sm text-ink">{set.name}</p>
+                <p className="text-xs font-bold text-amber-700">
                   {ownedCount}/{pieces.length}
                 </p>
               </div>
-              <div className="mt-1 h-2 border border-cyan-900 bg-navy">
+              <div className="progress-track mt-2">
                 <div
-                  className="h-full bg-cyan-jewel"
+                  className="progress-fill"
                   style={{
                     width: `${(ownedCount / pieces.length) * 100}%`,
+                    background: `linear-gradient(90deg, hsl(${set.hue} 70% 55%), hsl(${set.hue} 65% 40%))`,
                   }}
                 />
               </div>
-              <p className="mt-1 text-[10px] text-cyan-200/60">
+              <p className="mt-1.5 text-xs text-ink-soft">
                 Set bonus: +{set.bonusXpPct}% XP · +{set.bonusCoins} coins
               </p>
             </div>
@@ -122,13 +122,11 @@ export function Armory({
         })}
       </div>
 
-      <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+      <div className="hide-scrollbar mt-4 flex gap-2 overflow-x-auto pb-1">
         <button
           type="button"
           onClick={() => setSlotFilter("all")}
-          className={`pixel-chip min-h-9 shrink-0 text-[10px] ${
-            slotFilter === "all" ? "border-gold text-gold" : "border-cyan-700"
-          }`}
+          className={`chip shrink-0 ${slotFilter === "all" ? "chip-active" : ""}`}
         >
           All
         </button>
@@ -137,50 +135,41 @@ export function Armory({
             key={s}
             type="button"
             onClick={() => setSlotFilter(s)}
-            className={`pixel-chip min-h-9 shrink-0 text-[10px] ${
-              slotFilter === s ? "border-gold text-gold" : "border-cyan-700"
-            }`}
+            className={`chip shrink-0 ${slotFilter === s ? "chip-active" : ""}`}
           >
             {SLOT_LABELS[s]}
           </button>
         ))}
       </div>
 
-      <div className="mt-3 flex flex-col gap-2">
+      <div className="mt-3 flex flex-col gap-2.5">
         {owned.length === 0 && (
-          <p className="text-sm text-cyan-200/70">
+          <p className="text-sm text-ink-soft">
             No gear yet — open chests from level-ups or the Store.
           </p>
         )}
         {owned.map((g) => {
           const equipped = state.equipped[g.slot] === g.id;
           return (
-            <div
-              key={g.id}
-              className="pixel-panel flex items-center gap-2 p-2"
-            >
-              <PixelGearIcon gear={g} size={48} />
+            <div key={g.id} className="surface flex items-center gap-3 p-3">
+              <GearIcon gear={g} size={52} />
               <div className="min-w-0 flex-1">
-                <p className="truncate font-pixel text-[9px] text-cyan-50">
-                  {g.name}
-                </p>
-                <div className="mt-1 flex flex-wrap items-center gap-1">
+                <p className="truncate font-display text-sm text-ink">{g.name}</p>
+                <div className="mt-1 flex flex-wrap items-center gap-1.5">
                   <RarityBadge rarity={g.rarity} />
-                  <span className="text-[10px] text-lime-xp">
+                  <span className="text-xs font-semibold text-emerald-700">
                     +{g.xpBonusPct}% XP
                   </span>
-                  <span className="text-[10px] text-gold">
-                    +{g.coinBonus}🪙
+                  <span className="text-xs font-semibold text-amber-700">
+                    +{g.coinBonus} gold
                   </span>
                 </div>
               </div>
               <button
                 type="button"
-                onClick={() =>
-                  equipped ? onUnequip(g.slot) : onEquip(g.id)
-                }
-                className={`pixel-btn min-h-10 px-2 font-pixel text-[8px] ${
-                  equipped ? "pixel-btn-ghost" : "pixel-btn-primary"
+                onClick={() => (equipped ? onUnequip(g.slot) : onEquip(g.id))}
+                className={`btn min-h-10 px-3 text-xs ${
+                  equipped ? "btn-ghost" : "btn-primary"
                 }`}
               >
                 {equipped ? "Unequip" : "Equip"}
@@ -190,7 +179,7 @@ export function Armory({
         })}
       </div>
 
-      <p className="mt-4 text-[10px] text-cyan-200/50">
+      <p className="mt-4 text-center text-xs text-ink-soft">
         Catalog: {ALL_GEAR.length} unique pieces in the realm.
       </p>
     </div>
