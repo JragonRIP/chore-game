@@ -195,7 +195,7 @@ export const QUESTS: Quest[] = [
     name: "Tooth Shine Ritual",
     category: "School Prep",
     difficulty: "quick",
-    minutes: 3,
+    minutes: 2,
     xp: 40,
     coins: 8,
     goal: "Brush your teeth, then put the toothbrush and toothpaste away.",
