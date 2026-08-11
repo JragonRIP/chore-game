@@ -371,6 +371,17 @@ export const QUESTS: Quest[] = [
     icon: "🧹",
   },
   {
+    id: "vacuum-living",
+    name: "Living Room Vortex Raid",
+    category: "Cleaning",
+    difficulty: "epic",
+    minutes: 10,
+    xp: 90,
+    coins: 20,
+    goal: "Vacuum the living room floor — rugs, corners, and under the couch edge if you can reach.",
+    icon: "🌪️",
+  },
+  {
     id: "wastebasket-run",
     name: "Wastebasket Courier",
     category: "Cleaning",

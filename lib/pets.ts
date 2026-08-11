@@ -130,6 +130,48 @@ export const STORE_PETS = ALL_PETS.filter(
       p.rarity === "enchanted"),
 );
 
+/** ~40% of days have no companion offers. */
+const STORE_PET_APPEAR_CHANCE = 0.6;
+
+function hashSeed(input: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < input.length; i++) {
+    h ^= input.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function mulberry32(seed: number): () => number {
+  let t = seed >>> 0;
+  return () => {
+    t += 0x6d2b79f5;
+    let r = Math.imul(t ^ (t >>> 15), 1 | t);
+    r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/**
+ * Daily rotating companion shelf. Some days empty; otherwise 1–2 offers.
+ * Deterministic for a given date so the shelf stays stable all day.
+ */
+export function getDailyStorePets(dateKey: string): PetDef[] {
+  const rand = mulberry32(hashSeed(`pets-store-${dateKey}`));
+  if (rand() >= STORE_PET_APPEAR_CHANCE) return [];
+
+  const pool = [...STORE_PETS];
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    const tmp = pool[i]!;
+    pool[i] = pool[j]!;
+    pool[j] = tmp;
+  }
+
+  const count = rand() < 0.55 ? 1 : 2;
+  return pool.slice(0, count);
+}
+
 export function computePetQuestExtras(
   pet: PetDef | null | undefined,
   category: QuestCategory | undefined,

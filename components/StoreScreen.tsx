@@ -1,7 +1,9 @@
 "use client";
 
+import { useMemo } from "react";
 import { STORE_CHESTS, STORE_GEAR } from "@/lib/gear";
-import { STORE_PETS } from "@/lib/pets";
+import { getDailyStorePets } from "@/lib/pets";
+import { todayKey } from "@/lib/math";
 import { ChestIcon } from "@/components/ChestIcon";
 import { PetIcon } from "@/components/PetIcon";
 import { GearIcon, RarityBadge } from "@/components/PixelGearIcon";
@@ -19,6 +21,11 @@ export function StoreScreen({
   onBuyGear: (id: GearId) => void;
   onBuyPet: (id: PetId) => void;
 }) {
+  const dailyPets = useMemo(
+    () => (state.petsUnlocked ? getDailyStorePets(todayKey()) : []),
+    [state.petsUnlocked],
+  );
+
   return (
     <div className="mx-auto w-full max-w-lg px-3 pb-5 pt-4">
       <h2 className="font-display text-2xl text-ink">Hero Store</h2>
@@ -67,14 +74,15 @@ export function StoreScreen({
         </article>
       </div>
 
-      {state.petsUnlocked && (
+      {state.petsUnlocked && dailyPets.length > 0 && (
         <>
           <h3 className="mt-6 font-display text-lg text-ink">Companions</h3>
           <p className="mt-0.5 text-xs text-ink-soft">
-            Premium sidekicks. Mythic & Relic are chest-only.
+            Today&apos;s visiting sidekicks — check back another day for more.
+            Mythic & Relic are chest-only.
           </p>
           <div className="mt-2.5 flex flex-col gap-2.5">
-            {STORE_PETS.map((pet) => {
+            {dailyPets.map((pet) => {
               const owned = state.ownedPets.includes(pet.id);
               const canBuy =
                 !owned && state.gold >= (pet.storePrice ?? Infinity);
