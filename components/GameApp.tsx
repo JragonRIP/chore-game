@@ -10,7 +10,7 @@ import {
   CelebrationModal,
   ChestOpenModal,
   DailyChestGift,
-  ParentPlaceholder,
+  ParentPanel,
 } from "@/components/Modals";
 import { PlayerHeader } from "@/components/PlayerHeader";
 import { QuestBoard } from "@/components/QuestBoard";
@@ -59,6 +59,7 @@ export function GameApp() {
         state={g.state}
         xpNeeded={g.xpNeeded}
         xpPctBonus={g.bonuses.xpPct}
+        coinBonus={g.bonuses.coins}
         onLevelTap={g.onLevelBadgeTap}
       />
 
@@ -80,6 +81,8 @@ export function GameApp() {
           <Armory
             state={g.state}
             activeSetId={g.bonuses.activeSetId}
+            xpPctBonus={g.bonuses.xpPct}
+            coinBonus={g.bonuses.coins}
             onEquip={g.equipGear}
             onUnequip={g.unequipSlot}
           />
@@ -128,7 +131,11 @@ export function GameApp() {
       )}
 
       {g.parentOpen && (
-        <ParentPlaceholder
+        <ParentPanel
+          level={g.state.level}
+          xp={g.state.xp}
+          gold={g.state.gold}
+          onGrant={g.parentGrant}
           onClose={() => g.setParentOpen(false)}
           onReset={g.resetProgressSoft}
         />

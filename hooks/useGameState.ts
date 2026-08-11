@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GEAR_BY_ID, STORE_CHESTS } from "@/lib/gear";
 import {
+  applyFlatRewards,
   applyQuestRewards,
   canCompleteQuest,
   computeBonuses,
@@ -255,6 +256,23 @@ export function useGameState() {
     );
   }, []);
 
+  const parentGrant = useCallback((xpAmount: number, goldAmount: number) => {
+    const xpAdd = Math.max(0, Math.floor(xpAmount));
+    const goldAdd = Math.max(0, Math.floor(goldAmount));
+    if (xpAdd <= 0 && goldAdd <= 0) return;
+    setState((s) => {
+      if (!s) return s;
+      const flat = applyFlatRewards(s, xpAdd, goldAdd);
+      return {
+        ...s,
+        level: flat.level,
+        xp: flat.xp,
+        gold: flat.gold,
+        vaultChests: [...flat.chests, ...s.vaultChests],
+      };
+    });
+  }, []);
+
   const onLevelBadgeTap = useCallback(() => {
     levelTaps.current += 1;
     if (levelTaps.current >= 5) {
@@ -304,6 +322,7 @@ export function useGameState() {
     buyGear,
     equipGear,
     unequipSlot,
+    parentGrant,
     parentOpen,
     setParentOpen,
     onLevelBadgeTap,

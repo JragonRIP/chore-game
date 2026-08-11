@@ -198,20 +198,115 @@ export function DailyChestGift({
   );
 }
 
-export function ParentPlaceholder({
+export function ParentPanel({
+  gold,
+  xp,
+  level,
+  onGrant,
   onClose,
   onReset,
 }: {
+  gold: number;
+  xp: number;
+  level: number;
+  onGrant: (xp: number, gold: number) => void;
   onClose: () => void;
   onReset: () => void;
 }) {
+  const [xpInput, setXpInput] = useState("50");
+  const [goldInput, setGoldInput] = useState("25");
+
+  const grantXp = () => {
+    const n = Number(xpInput);
+    if (!Number.isFinite(n) || n <= 0) return;
+    onGrant(n, 0);
+  };
+
+  const grantGold = () => {
+    const n = Number(goldInput);
+    if (!Number.isFinite(n) || n <= 0) return;
+    onGrant(0, n);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-4 backdrop-blur-sm sm:items-center">
-      <div className="surface-strong w-full max-w-sm p-5 rise-in">
+      <div className="surface-strong max-h-[90dvh] w-full max-w-sm overflow-y-auto p-5 rise-in">
         <h3 className="font-display text-xl text-ink">Grown-Up Panel</h3>
-        <p className="mt-3 text-sm text-ink-soft">
-          Coming soon: edit quests, manage rewards, and parent controls.
+        <p className="mt-1 text-sm text-ink-soft">
+          Level {level} · {xp} XP · {gold} gold
         </p>
+
+        <div className="mt-4 rounded-2xl bg-sky-1/80 p-3">
+          <p className="text-xs font-bold uppercase tracking-wide text-ink-soft">
+            Add XP
+          </p>
+          <div className="mt-2 flex gap-2">
+            <input
+              type="number"
+              min={1}
+              inputMode="numeric"
+              value={xpInput}
+              onChange={(e) => setXpInput(e.target.value)}
+              className="field min-h-11 flex-1"
+            />
+            <button
+              type="button"
+              onClick={grantXp}
+              className="btn btn-secondary min-h-11 shrink-0 px-4 text-sm"
+            >
+              Add XP
+            </button>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {[25, 50, 100, 250].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => onGrant(n, 0)}
+                className="chip border-emerald-200 bg-emerald-50 text-emerald-700"
+              >
+                +{n} XP
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-3 rounded-2xl bg-amber-50/90 p-3">
+          <p className="text-xs font-bold uppercase tracking-wide text-ink-soft">
+            Add Gold
+          </p>
+          <div className="mt-2 flex gap-2">
+            <input
+              type="number"
+              min={1}
+              inputMode="numeric"
+              value={goldInput}
+              onChange={(e) => setGoldInput(e.target.value)}
+              className="field min-h-11 flex-1"
+            />
+            <button
+              type="button"
+              onClick={grantGold}
+              className="btn btn-primary min-h-11 shrink-0 gap-1 px-4 text-sm"
+            >
+              <GoldCoin size={16} />
+              Add
+            </button>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {[10, 25, 50, 100].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => onGrant(0, n)}
+                className="chip border-amber-200 bg-amber-100 text-amber-800"
+              >
+                +{n}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <button type="button" onClick={onClose} className="btn btn-primary mt-5 w-full">
           Close
         </button>
@@ -226,3 +321,6 @@ export function ParentPlaceholder({
     </div>
   );
 }
+
+/** @deprecated use ParentPanel */
+export const ParentPlaceholder = ParentPanel;

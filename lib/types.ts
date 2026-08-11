@@ -5,6 +5,8 @@ export type QuestCategory =
   | "Pets"
   | "School Prep"
   | "Kitchen"
+  | "Laundry"
+  | "Cleaning"
   | "Outdoor";
 export type Difficulty = "quick" | "epic";
 export type TabId = "quest" | "vault" | "armory" | "store";

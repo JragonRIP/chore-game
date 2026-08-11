@@ -8,11 +8,13 @@ export function PlayerHeader({
   state,
   xpNeeded,
   xpPctBonus,
+  coinBonus,
   onLevelTap,
 }: {
   state: GameState;
   xpNeeded: number;
   xpPctBonus: number;
+  coinBonus: number;
   onLevelTap: () => void;
 }) {
   const hero = state.hero!;
@@ -30,7 +32,7 @@ export function PlayerHeader({
           />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-1.5">
             <p className="truncate font-display text-base text-ink">
               {hero.name}
             </p>
@@ -42,13 +44,20 @@ export function PlayerHeader({
             >
               Lv {state.level}
             </button>
+            <div className="hide-scrollbar flex min-w-0 shrink items-center gap-1 overflow-x-auto">
+              <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                +{xpPctBonus}% XP
+              </span>
+              <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+                <GoldCoin size={10} />+{coinBonus}
+              </span>
+            </div>
           </div>
           <div id="xp-bar-target" className="progress-track mt-1.5">
             <div className="progress-fill" style={{ width: `${pct}%` }} />
           </div>
           <p className="mt-1 text-[11px] text-ink-soft">
             {state.xp}/{xpNeeded} XP
-            {xpPctBonus > 0 ? ` · +${xpPctBonus}% gear` : ""}
           </p>
         </div>
         <div

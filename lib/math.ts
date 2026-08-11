@@ -223,6 +223,45 @@ export function applyQuestRewards(
   };
 }
 
+/** Parent / admin grant: exact XP and gold, no gear multipliers. */
+export function applyFlatRewards(
+  state: GameState,
+  xpAdd: number,
+  goldAdd: number,
+): {
+  level: number;
+  xp: number;
+  gold: number;
+  chests: VaultChest[];
+  levelsGained: number[];
+} {
+  const gainedXp = Math.max(0, Math.floor(xpAdd));
+  const gainedCoins = Math.max(0, Math.floor(goldAdd));
+
+  let level = state.level;
+  let xp = state.xp + gainedXp;
+  const gold = state.gold + gainedCoins;
+  const levelsGained: number[] = [];
+  const chests: VaultChest[] = [];
+
+  while (xp >= xpToNextLevel(level)) {
+    xp -= xpToNextLevel(level);
+    level += 1;
+    levelsGained.push(level);
+    const legendary = isLegendaryLevel(level);
+    chests.push({
+      id: makeChestId(),
+      type: legendary ? "legendary" : "normal",
+      reason: legendary
+        ? `Level ${level} Golden Chest`
+        : `Level ${level} Wooden Chest`,
+      earnedAt: Date.now(),
+    });
+  }
+
+  return { level, xp, gold, chests, levelsGained };
+}
+
 function pickWeighted<T extends { weight: number }>(items: T[]): T {
   const total = items.reduce((s, i) => s + i.weight, 0);
   let roll = Math.random() * total;

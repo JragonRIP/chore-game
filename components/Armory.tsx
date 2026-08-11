@@ -13,17 +13,21 @@ import { HeroSprite } from "@/components/HeroSprite";
 import { GearIcon, RarityBadge } from "@/components/PixelGearIcon";
 import type { GameState, GearId, Slot } from "@/lib/types";
 
-const LEFT_SLOTS: Array<Slot | "pet"> = ["helmet", "chestplate", "leggings", "pet"];
-const RIGHT_SLOTS: Slot[] = ["boots", "weapon"];
+const LEFT_SLOTS: Slot[] = ["helmet", "chestplate", "leggings"];
+const RIGHT_SLOTS: Array<Slot | "pet"> = ["boots", "weapon", "pet"];
 
 export function Armory({
   state,
   activeSetId,
+  xpPctBonus,
+  coinBonus,
   onEquip,
   onUnequip,
 }: {
   state: GameState;
   activeSetId: string | null;
+  xpPctBonus: number;
+  coinBonus: number;
   onEquip: (id: GearId) => void;
   onUnequip: (slot: Slot) => void;
 }) {
@@ -95,15 +99,25 @@ export function Armory({
             />
           </div>
           <p className="mt-2 font-display text-base text-ink">{hero.name}</p>
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5">
+            <span className="rounded-full bg-xp/15 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700">
+              Lv {state.level}
+            </span>
+            <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700">
+              +{xpPctBonus}% XP
+            </span>
+            <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-bold text-amber-800">
+              +{coinBonus} gold / quest
+            </span>
+          </div>
           {activeSetId && (
-            <p className="mt-1 rounded-xl bg-xp/10 px-2.5 py-1 text-[10px] font-bold text-emerald-700">
+            <p className="mt-1.5 rounded-xl bg-xp/10 px-2.5 py-1 text-[10px] font-bold text-emerald-700">
               Set: {GEAR_SETS.find((s) => s.id === activeSetId)?.name}
             </p>
           )}
         </div>
         <div className="flex flex-col gap-2">
           {RIGHT_SLOTS.map(slotButton)}
-          <div className="h-[4.5rem] w-[4.5rem]" />
         </div>
       </div>
 
