@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GEAR_BY_ID, STORE_CHESTS } from "@/lib/gear";
+import { XP_BOTTLE_BY_ID } from "@/lib/xpBottles";
 import {
   applyFlatRewards,
   applyQuestRewards,
@@ -9,6 +10,7 @@ import {
   canStartQuest,
   computeBonuses,
   createInitialState,
+  emptyPetTreats,
   isQuestFullyDoneToday,
   makeChestId,
   normalizeState,
@@ -17,7 +19,14 @@ import {
   todayKey,
   xpToNextLevel,
 } from "@/lib/math";
-import { defaultPetProgress, getPetProgress, PET_BY_ID } from "@/lib/pets";
+import {
+  applyPetXpGain,
+  defaultPetProgress,
+  getPetProgress,
+  MAX_PET_LEVEL,
+  PET_BY_ID,
+} from "@/lib/pets";
+import { PET_TREAT_BY_ID } from "@/lib/petTreats";
 import { getQuestById } from "@/lib/questResolve";
 import { loadGame, saveGame } from "@/lib/storage";
 import type {
@@ -26,12 +35,14 @@ import type {
   GearId,
   LootEvent,
   PetId,
+  PetTreatId,
   QuestId,
   QuestOverride,
   ScreenPhase,
   Slot,
   TabId,
   VaultChest,
+  XpBottleId,
 } from "@/lib/types";
 
 export const PARENT_PIN = "5869";
@@ -311,6 +322,96 @@ export function useGameState() {
     });
   }, []);
 
+  const buyPetTreat = useCallback((treatId: PetTreatId) => {
+    const def = PET_TREAT_BY_ID[treatId];
+    if (!def) return;
+    setState((s) => {
+      if (!s || s.gold < def.price) return s;
+      const bag = s.petTreats ?? emptyPetTreats();
+      return {
+        ...s,
+        gold: s.gold - def.price,
+        petTreats: {
+          ...bag,
+          [treatId]: (bag[treatId] ?? 0) + 1,
+        },
+      };
+    });
+  }, []);
+
+  const feedPetTreat = useCallback((treatId: PetTreatId, petId: PetId) => {
+    const def = PET_TREAT_BY_ID[treatId];
+    if (!def) return;
+    setState((s) => {
+      if (!s) return s;
+      const bag = s.petTreats ?? emptyPetTreats();
+      if ((bag[treatId] ?? 0) < 1) return s;
+      if (!s.ownedPets.includes(petId)) return s;
+      const current = getPetProgress(s.petProgress, petId);
+      if (current.level >= MAX_PET_LEVEL) return s;
+      const applied = applyPetXpGain(current, def.xp);
+      return {
+        ...s,
+        petProgress: {
+          ...s.petProgress,
+          [petId]: applied.progress,
+        },
+        petTreats: {
+          ...bag,
+          [treatId]: bag[treatId] - 1,
+        },
+      };
+    });
+  }, []);
+
+  const buyXpBottle = useCallback((bottleId: XpBottleId) => {
+    const def = XP_BOTTLE_BY_ID[bottleId];
+    if (!def) return;
+    setState((s) => {
+      if (!s || s.gold < def.price) return s;
+      return {
+        ...s,
+        gold: s.gold - def.price,
+        xpBottles: {
+          ...s.xpBottles,
+          [bottleId]: (s.xpBottles[bottleId] ?? 0) + 1,
+        },
+      };
+    });
+  }, []);
+
+  const useXpBottle = useCallback((bottleId: XpBottleId) => {
+    const def = XP_BOTTLE_BY_ID[bottleId];
+    if (!def) return;
+    setState((s) => {
+      if (!s || (s.xpBottles[bottleId] ?? 0) < 1) return s;
+      const flat = applyFlatRewards(s, def.xp, 0);
+      queueMicrotask(() => {
+        setCelebration({
+          xp: def.xp,
+          coins: 0,
+          questName: def.name,
+          levels: flat.levelsGained,
+          chestsEarned: flat.chests.length,
+          equippedPetId: s.equippedPet,
+          petXp: 0,
+          petLevels: [],
+        });
+      });
+      return {
+        ...s,
+        level: flat.level,
+        xp: flat.xp,
+        gold: flat.gold,
+        vaultChests: [...flat.chests, ...s.vaultChests],
+        xpBottles: {
+          ...s.xpBottles,
+          [bottleId]: s.xpBottles[bottleId] - 1,
+        },
+      };
+    });
+  }, []);
+
   const buyGear = useCallback((gearId: GearId) => {
     const gear = GEAR_BY_ID[gearId];
     if (!gear?.storePrice) return;
@@ -480,6 +581,10 @@ export function useGameState() {
     startQuest,
     completeQuest,
     buyChest,
+    buyXpBottle,
+    useXpBottle,
+    buyPetTreat,
+    feedPetTreat,
     buyGear,
     buyPet,
     equipGear,

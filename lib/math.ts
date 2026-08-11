@@ -31,8 +31,10 @@ import type {
   QuestCategory,
   QuestId,
   QuestOverride,
+  PetTreatId,
   Rarity,
   VaultChest,
+  XpBottleId,
 } from "./types";
 
 export function todayKey(d = new Date()): string {
@@ -51,6 +53,36 @@ export function xpToNextLevel(level: number): number {
 
 export function isLegendaryLevel(level: number): boolean {
   return level > 0 && level % 5 === 0;
+}
+
+export function emptyXpBottles(): Record<XpBottleId, number> {
+  return { "xp-sip": 0, "xp-flask": 0 };
+}
+
+function normalizeXpBottles(raw: unknown): Record<XpBottleId, number> {
+  const next = emptyXpBottles();
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return next;
+  const rec = raw as Record<string, unknown>;
+  for (const id of Object.keys(next) as XpBottleId[]) {
+    const n = rec[id];
+    next[id] = typeof n === "number" && n > 0 ? Math.floor(n) : 0;
+  }
+  return next;
+}
+
+export function emptyPetTreats(): Record<PetTreatId, number> {
+  return { "treat-nibble": 0, "treat-feast": 0 };
+}
+
+function normalizePetTreats(raw: unknown): Record<PetTreatId, number> {
+  const next = emptyPetTreats();
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return next;
+  const rec = raw as Record<string, unknown>;
+  for (const id of Object.keys(next) as PetTreatId[]) {
+    const n = rec[id];
+    next[id] = typeof n === "number" && n > 0 ? Math.floor(n) : 0;
+  }
+  return next;
 }
 
 export function emptyEquipped(): EquippedMap {
@@ -89,6 +121,8 @@ export function createInitialState(): GameState {
     lootLog: [],
     vaultChests: [],
     freeChestDate: null,
+    xpBottles: emptyXpBottles(),
+    petTreats: emptyPetTreats(),
   };
 }
 
@@ -172,6 +206,8 @@ export function normalizeState(raw: unknown): GameState {
       typeof r.freeChestDate === "string" || r.freeChestDate === null
         ? (r.freeChestDate as string | null)
         : null,
+    xpBottles: normalizeXpBottles(r.xpBottles),
+    petTreats: normalizePetTreats(r.petTreats),
   };
 
   const today = todayKey();

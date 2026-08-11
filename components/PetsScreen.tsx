@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { HeroSprite } from "@/components/HeroSprite";
 import { PetIcon, PetSprite } from "@/components/PetIcon";
+import { PetTreatIcon } from "@/components/PetTreatIcon";
 import { RarityBadge } from "@/components/PixelGearIcon";
 import {
   getPetProgress,
@@ -12,16 +13,19 @@ import {
   petLevelMultiplier,
   petXpToNextLevel,
 } from "@/lib/pets";
-import type { GameState, PetId } from "@/lib/types";
+import { STORE_PET_TREATS } from "@/lib/petTreats";
+import type { GameState, PetId, PetTreatId } from "@/lib/types";
 
 export function PetsScreen({
   state,
   onEquip,
   onUnequip,
+  onFeedTreat,
 }: {
   state: GameState;
   onEquip: (id: PetId) => void;
   onUnequip: () => void;
+  onFeedTreat: (treatId: PetTreatId, petId: PetId) => void;
 }) {
   const hero = state.hero!;
   const equipped = state.equippedPet
@@ -39,6 +43,23 @@ export function PetsScreen({
         .sort((a, b) => a.species.localeCompare(b.species)),
     [state.ownedPets],
   );
+  const treatBag = state.petTreats ?? {
+    "treat-nibble": 0,
+    "treat-feast": 0,
+  };
+  const ownedTreats = STORE_PET_TREATS.filter(
+    (t) => (treatBag[t.id] ?? 0) > 0,
+  );
+  const [selectedTreat, setSelectedTreat] = useState<PetTreatId>(
+    ownedTreats[0]?.id ?? "treat-nibble",
+  );
+  const selectedDef =
+    STORE_PET_TREATS.find((t) => t.id === selectedTreat) ??
+    ownedTreats[0] ??
+    null;
+  const selectedCount = selectedDef
+    ? (treatBag[selectedDef.id] ?? 0)
+    : 0;
 
   if (!state.petsUnlocked) {
     return (
@@ -135,11 +156,56 @@ export function PetsScreen({
                 />
               </div>
             </div>
+            {selectedDef && selectedCount > 0 && equippedProgress.level < MAX_PET_LEVEL && (
+              <button
+                type="button"
+                onClick={() => onFeedTreat(selectedDef.id, equipped.id)}
+                className="btn btn-primary mt-3 min-h-10 w-full text-xs"
+              >
+                Feed {selectedDef.name} (+{selectedDef.xp} XP)
+              </button>
+            )}
           </div>
         ) : (
           <p className="mt-2 text-sm text-ink-soft">No companion equipped</p>
         )}
       </div>
+
+      {ownedTreats.length > 0 && (
+        <>
+          <h3 className="mt-5 font-display text-lg text-ink">Treat Pouch</h3>
+          <p className="mt-0.5 text-xs text-ink-soft">
+            Pick a treat, then feed any pet below.
+          </p>
+          <div className="mt-2.5 flex flex-col gap-2.5">
+            {ownedTreats.map((treat) => {
+              const count = treatBag[treat.id] ?? 0;
+              const active = selectedDef?.id === treat.id;
+              return (
+                <button
+                  key={treat.id}
+                  type="button"
+                  onClick={() => setSelectedTreat(treat.id)}
+                  className={`surface flex items-center gap-3 p-3 text-left ${
+                    active ? "ring-2 ring-teal" : ""
+                  }`}
+                >
+                  <PetTreatIcon treat={treat} size={48} />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-display text-sm text-ink">{treat.name}</p>
+                    <p className="text-xs font-semibold text-teal-deep">
+                      +{treat.xp} Pet XP · ×{count}
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-bold text-ink-soft">
+                    {active ? "Selected" : "Select"}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       <h3 className="mt-5 font-display text-lg text-ink">Your Pets</h3>
       <div className="mt-2.5 flex flex-col gap-2.5">
@@ -188,17 +254,30 @@ export function PetsScreen({
                   {pet.traitLabel}
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() =>
-                  isEquipped ? onUnequip() : onEquip(pet.id)
-                }
-                className={`btn min-h-10 px-3 text-xs ${
-                  isEquipped ? "btn-ghost" : "btn-primary"
-                }`}
-              >
-                {isEquipped ? "Unequip" : "Equip"}
-              </button>
+              <div className="flex shrink-0 flex-col gap-1.5">
+                <button
+                  type="button"
+                  onClick={() =>
+                    isEquipped ? onUnequip() : onEquip(pet.id)
+                  }
+                  className={`btn min-h-10 px-3 text-xs ${
+                    isEquipped ? "btn-ghost" : "btn-primary"
+                  }`}
+                >
+                  {isEquipped ? "Unequip" : "Equip"}
+                </button>
+                {selectedDef &&
+                  selectedCount > 0 &&
+                  progress.level < MAX_PET_LEVEL && (
+                    <button
+                      type="button"
+                      onClick={() => onFeedTreat(selectedDef.id, pet.id)}
+                      className="btn btn-secondary min-h-9 px-3 text-[10px]"
+                    >
+                      Feed
+                    </button>
+                  )}
+              </div>
             </div>
           );
         })}

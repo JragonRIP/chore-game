@@ -93,6 +93,7 @@ export function GameApp() {
           <TreasureVault
             state={g.state}
             onOpenChest={g.beginOpenChest}
+            onUseXpBottle={g.useXpBottle}
           />
         )}
         {g.tab === "armory" && (
@@ -110,12 +111,15 @@ export function GameApp() {
             state={g.state}
             onEquip={g.equipPet}
             onUnequip={g.unequipPet}
+            onFeedTreat={g.feedPetTreat}
           />
         )}
         {g.tab === "store" && (
           <StoreScreen
             state={g.state}
             onBuyChest={g.buyChest}
+            onBuyXpBottle={g.buyXpBottle}
+            onBuyPetTreat={g.buyPetTreat}
             onBuyGear={g.buyGear}
             onBuyPet={g.buyPet}
           />

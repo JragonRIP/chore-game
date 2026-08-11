@@ -2,18 +2,22 @@
 
 import { useMemo, useState } from "react";
 import { GEAR_BY_ID } from "@/lib/gear";
+import { STORE_XP_BOTTLES } from "@/lib/xpBottles";
 import { ChestIcon } from "@/components/ChestIcon";
 import { GearIcon, RarityBadge } from "@/components/PixelGearIcon";
-import type { GameState, VaultChest } from "@/lib/types";
+import { XpBottleIcon } from "@/components/XpBottleIcon";
+import type { GameState, VaultChest, XpBottleId } from "@/lib/types";
 
 type VaultFilter = "Chests" | "Loot";
 
 export function TreasureVault({
   state,
   onOpenChest,
+  onUseXpBottle,
 }: {
   state: GameState;
   onOpenChest: (chest: VaultChest) => void;
+  onUseXpBottle: (id: XpBottleId) => void;
 }) {
   const [filter, setFilter] = useState<VaultFilter>("Chests");
 
@@ -22,11 +26,22 @@ export function TreasureVault({
     [state.lootLog],
   );
 
+  const bottles = useMemo(
+    () =>
+      STORE_XP_BOTTLES.map((bottle) => ({
+        bottle,
+        count: state.xpBottles[bottle.id] ?? 0,
+      })).filter((row) => row.count > 0),
+    [state.xpBottles],
+  );
+
+  const storedCount = state.vaultChests.length + bottles.reduce((n, b) => n + b.count, 0);
+
   return (
     <div className="mx-auto w-full max-w-lg px-3 pb-5 pt-4">
       <h2 className="font-display text-2xl text-ink">Treasure Vault</h2>
       <p className="mt-0.5 text-sm text-ink-soft">
-        Open chests and browse your loot.
+        Open chests, drink XP bottles, and browse your loot.
       </p>
 
       <div className="hide-scrollbar mt-4 flex gap-2 overflow-x-auto pb-1">
@@ -38,19 +53,40 @@ export function TreasureVault({
             className={`chip shrink-0 ${filter === f ? "chip-active" : ""}`}
           >
             {f}
-            {f === "Chests" ? ` (${state.vaultChests.length})` : ""}
+            {f === "Chests" ? ` (${storedCount})` : ""}
           </button>
         ))}
       </div>
 
       {filter === "Chests" && (
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {state.vaultChests.length === 0 && (
+          {storedCount === 0 && (
             <p className="text-sm text-ink-soft">
-              No chests yet. Level up, visit the Store, or claim your daily
-              chest!
+              No chests or bottles yet. Level up, visit the Store, or claim
+              your daily chest!
             </p>
           )}
+          {bottles.map(({ bottle, count }) => (
+            <div
+              key={bottle.id}
+              className="surface-strong flex items-center gap-3 p-3"
+            >
+              <XpBottleIcon bottle={bottle} size={64} />
+              <div className="min-w-0 flex-1">
+                <p className="font-display text-base text-ink">{bottle.name}</p>
+                <p className="mt-0.5 text-xs font-semibold text-emerald-700">
+                  +{bottle.xp} XP · ×{count}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => onUseXpBottle(bottle.id)}
+                  className="btn btn-primary mt-2 min-h-9 px-3 text-xs"
+                >
+                  Drink
+                </button>
+              </div>
+            </div>
+          ))}
           {state.vaultChests.map((chest) => (
             <button
               key={chest.id}

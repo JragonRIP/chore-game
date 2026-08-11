@@ -18,6 +18,8 @@ export type AvatarId =
   | "berserker";
 export type ChestType = "normal" | "legendary";
 export type PetSpecies = "lizard" | "wolf" | "lion" | "dragon";
+export type XpBottleId = "xp-sip" | "xp-flask";
+export type PetTreatId = "treat-nibble" | "treat-feast";
 
 export type QuestId = string;
 export type GearId = string;
@@ -119,6 +121,22 @@ export interface VaultChest {
   earnedAt: number;
 }
 
+export interface XpBottleDef {
+  id: XpBottleId;
+  name: string;
+  xp: number;
+  price: number;
+  hue: number;
+}
+
+export interface PetTreatDef {
+  id: PetTreatId;
+  name: string;
+  xp: number;
+  price: number;
+  hue: number;
+}
+
 export interface GameState {
   version: 4;
   hasSeenStory: boolean;
@@ -143,6 +161,10 @@ export interface GameState {
   lootLog: GearId[];
   vaultChests: VaultChest[];
   freeChestDate: string | null;
+  /** Owned XP bottles waiting to be used in the Vault. */
+  xpBottles: Record<XpBottleId, number>;
+  /** Owned pet treats waiting to be fed on the Pets tab. */
+  petTreats: Record<PetTreatId, number>;
 }
 
 export type ScreenPhase = "story" | "create" | "play";
