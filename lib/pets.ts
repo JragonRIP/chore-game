@@ -130,10 +130,6 @@ export const STORE_PETS = ALL_PETS.filter(
       p.rarity === "enchanted"),
 );
 
-export function petDisplayName(pet: PetDef): string {
-  return PET_SPECIES_LABELS[pet.species];
-}
-
 export function computePetQuestExtras(
   pet: PetDef | null | undefined,
   category: QuestCategory | undefined,

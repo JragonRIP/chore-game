@@ -2,7 +2,9 @@
 
 import { useEffect, useState, type CSSProperties } from "react";
 import { GEAR_BY_ID } from "@/lib/gear";
+import { PET_BY_ID } from "@/lib/pets";
 import { ChestIcon } from "@/components/ChestIcon";
+import { PetIcon } from "@/components/PetIcon";
 import { GearIcon, RarityBadge } from "@/components/PixelGearIcon";
 import { GoldCoin } from "@/components/GoldCoin";
 import type { Celebration } from "@/hooks/useGameState";
@@ -16,6 +18,9 @@ export function CelebrationModal({
   onClose: () => void;
 }) {
   const [phase, setPhase] = useState<"burst" | "fly" | "done">("burst");
+  const pet = data.equippedPetId
+    ? PET_BY_ID[data.equippedPetId]
+    : null;
 
   useEffect(() => {
     const t1 = window.setTimeout(() => setPhase("fly"), 450);
@@ -50,6 +55,11 @@ export function CelebrationModal({
           </p>
           <h3 className="mt-1 font-display text-2xl text-ink">Quest Complete!</h3>
           <p className="mt-1 text-sm text-ink-soft">{data.questName}</p>
+          {pet && (
+            <div className="mt-3 flex justify-center">
+              <PetIcon pet={pet} size={48} />
+            </div>
+          )}
         </div>
       </div>
 
@@ -98,6 +108,10 @@ export function ChestOpenModal({
   const gear =
     loot && (loot.kind === "gear" || loot.kind === "duplicate")
       ? GEAR_BY_ID[loot.gearId]
+      : null;
+  const pet =
+    loot && (loot.kind === "pet" || loot.kind === "pet-duplicate")
+      ? PET_BY_ID[loot.petId]
       : null;
   const legendary = chest.type === "legendary";
 
@@ -162,25 +176,39 @@ export function ChestOpenModal({
                 </div>
               </>
             )}
-            {loot.kind === "pet" && (
+            {loot.kind === "pet" && pet && (
               <>
-                <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">
-                  New Pet!
+                <p className="text-xs font-bold uppercase tracking-wide text-teal-deep">
+                  New Companion!
                 </p>
-                <p className="mt-4 font-display text-lg text-ink">
-                  A companion joined your party!
-                </p>
+                <div className="mt-4 flex flex-col items-center gap-2 loot-pop">
+                  <PetIcon pet={pet} size={88} />
+                  <p className="font-display text-lg text-ink">{pet.name}</p>
+                  <RarityBadge rarity={pet.rarity} />
+                  <p className="text-sm text-ink-soft">
+                    +{pet.xpBonusPct}% XP · +{pet.coinBonus} gold / quest
+                  </p>
+                  <p className="text-xs font-semibold text-teal-deep">
+                    {pet.traitLabel}
+                  </p>
+                </div>
               </>
             )}
             {loot.kind === "pet-duplicate" && (
               <>
                 <p className="text-xs font-bold uppercase tracking-wide text-amber-700">
-                  Pet Duplicate
+                  Duplicate Companion
                 </p>
-                <div className="mt-4 flex items-center justify-center gap-2 font-display text-2xl text-amber-800">
-                  <GoldCoin size={28} />+{loot.coinsAwarded}
+                <p className="mt-2 text-ink-soft">
+                  Already owned{" "}
+                  <span className="font-semibold text-ink">{pet?.name}</span>
+                </p>
+                <div className="mt-4 flex flex-col items-center gap-2 font-display text-xl text-amber-800">
+                  <div className="flex items-center gap-2">
+                    <GoldCoin size={28} />+{loot.coinsAwarded}
+                  </div>
+                  <span className="text-emerald-700">+{loot.xpAwarded} XP</span>
                 </div>
-                <p className="mt-2 text-sm text-ink-soft">+{loot.xpAwarded} XP</p>
               </>
             )}
             <button
@@ -192,6 +220,30 @@ export function ChestOpenModal({
             </button>
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+export function PetsUnlockModal({ onDismiss }: { onDismiss: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/45 p-4 backdrop-blur-sm sm:items-center">
+      <div className="surface-strong w-full max-w-sm p-5 text-center rise-in">
+        <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-3xl bg-gradient-to-br from-teal/20 to-sky-2 loot-pop">
+          <span className="font-display text-5xl text-teal-deep">?</span>
+        </div>
+        <h3 className="mt-4 font-display text-2xl text-ink">Pets Unlocked!</h3>
+        <p className="mt-2 text-sm text-ink-soft">
+          Loyal companions can now join your quests. Find them in chests and on
+          the Store shelf — then equip one on the Pets tab.
+        </p>
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="btn btn-primary mt-5 w-full"
+        >
+          Meet Companions
+        </button>
       </div>
     </div>
   );

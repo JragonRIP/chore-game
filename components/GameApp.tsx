@@ -11,7 +11,9 @@ import {
   ChestOpenModal,
   DailyChestGift,
   ParentPanel,
+  PetsUnlockModal,
 } from "@/components/Modals";
+import { PetsScreen } from "@/components/PetsScreen";
 import { PlayerHeader } from "@/components/PlayerHeader";
 import { QuestBoard } from "@/components/QuestBoard";
 import { StoreScreen } from "@/components/StoreScreen";
@@ -87,11 +89,19 @@ export function GameApp() {
             onUnequip={g.unequipSlot}
           />
         )}
+        {g.tab === "pets" && (
+          <PetsScreen
+            state={g.state}
+            onEquip={g.equipPet}
+            onUnequip={g.unequipPet}
+          />
+        )}
         {g.tab === "store" && (
           <StoreScreen
             state={g.state}
             onBuyChest={g.buyChest}
             onBuyGear={g.buyGear}
+            onBuyPet={g.buyPet}
           />
         )}
       </main>
@@ -110,7 +120,7 @@ export function GameApp() {
       {g.celebration && (
         <CelebrationModal
           data={g.celebration}
-          onClose={() => g.dismissCelebration()}
+          onClose={g.dismissCelebration}
         />
       )}
 
@@ -126,9 +136,16 @@ export function GameApp() {
           />
         )}
 
-      {g.dailyGift && !g.celebration && !g.openingChest && (
-        <DailyChestGift onDismiss={g.dismissDailyGift} />
+      {g.petsUnlockOpen && !g.celebration && !g.openingChest && (
+        <PetsUnlockModal onDismiss={g.dismissPetsUnlock} />
       )}
+
+      {g.dailyGift &&
+        !g.celebration &&
+        !g.openingChest &&
+        !g.petsUnlockOpen && (
+          <DailyChestGift onDismiss={g.dismissDailyGift} />
+        )}
 
       {g.parentOpen && (
         <ParentPanel
