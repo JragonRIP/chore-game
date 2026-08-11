@@ -112,6 +112,7 @@ export function GameApp() {
         <ActiveQuestSheet
           questId={openQuestId}
           active={activeForSheet}
+          state={g.state}
           onClose={() => setOpenQuestId(null)}
           onComplete={handleComplete}
         />
@@ -149,12 +150,12 @@ export function GameApp() {
 
       {g.parentOpen && (
         <ParentPanel
-          level={g.state.level}
-          xp={g.state.xp}
-          gold={g.state.gold}
+          state={g.state}
           onGrant={g.parentGrant}
           onClose={() => g.setParentOpen(false)}
           onReset={g.resetProgressSoft}
+          onForceUnlockPets={g.parentForceUnlockPets}
+          onUpdateQuest={g.parentUpdateQuest}
         />
       )}
     </div>

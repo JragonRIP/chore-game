@@ -9,7 +9,8 @@ import {
   questCooldownRemainingMs,
   questMaxPerDay,
 } from "@/lib/math";
-import { QUESTS, QUEST_CATEGORIES } from "@/lib/quests";
+import { QUEST_CATEGORIES } from "@/lib/quests";
+import { getPlayableQuests } from "@/lib/questResolve";
 import type { GameState, QuestCategory, QuestId } from "@/lib/types";
 
 export function QuestBoard({
@@ -32,12 +33,12 @@ export function QuestBoard({
   }, []);
 
   const filtered = useMemo(() => {
-    return QUESTS.filter((q) => {
+    return getPlayableQuests(state).filter((q) => {
       return (
         category === "All Quests" || q.category === (category as QuestCategory)
       );
     });
-  }, [category]);
+  }, [category, state]);
 
   return (
     <div className="mx-auto w-full max-w-lg px-3 pb-5 pt-4">

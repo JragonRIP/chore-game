@@ -8,7 +8,16 @@ import { PetIcon } from "@/components/PetIcon";
 import { GearIcon, RarityBadge } from "@/components/PixelGearIcon";
 import { GoldCoin } from "@/components/GoldCoin";
 import type { Celebration } from "@/hooks/useGameState";
-import type { LootEvent, VaultChest } from "@/lib/types";
+import { PARENT_PIN } from "@/hooks/useGameState";
+import type {
+  GameState,
+  LootEvent,
+  QuestId,
+  QuestOverride,
+  VaultChest,
+} from "@/lib/types";
+import { QUESTS } from "@/lib/quests";
+import { getQuestById } from "@/lib/questResolve";
 
 export function CelebrationModal({
   data,
@@ -23,9 +32,10 @@ export function CelebrationModal({
     : null;
 
   useEffect(() => {
+    const hold = data.petXp > 0 ? 2100 : 1750;
     const t1 = window.setTimeout(() => setPhase("fly"), 450);
     const t2 = window.setTimeout(() => setPhase("done"), 1400);
-    const t3 = window.setTimeout(onClose, 1750);
+    const t3 = window.setTimeout(onClose, hold);
     return () => {
       window.clearTimeout(t1);
       window.clearTimeout(t2);
@@ -56,8 +66,16 @@ export function CelebrationModal({
           <h3 className="mt-1 font-display text-2xl text-ink">Quest Complete!</h3>
           <p className="mt-1 text-sm text-ink-soft">{data.questName}</p>
           {pet && (
-            <div className="mt-3 flex justify-center">
+            <div className="mt-3 flex flex-col items-center gap-2">
               <PetIcon pet={pet} size={48} />
+              {data.petXp > 0 && (
+                <span className="rounded-full bg-teal/15 px-3 py-1 text-[11px] font-bold text-teal-deep">
+                  +{data.petXp} Pet XP
+                  {data.petLevels.length > 0
+                    ? ` · Pet Lv ${data.petLevels[data.petLevels.length - 1]}!`
+                    : ""}
+                </span>
+              )}
             </div>
           )}
         </div>
@@ -274,22 +292,38 @@ export function DailyChestGift({
 }
 
 export function ParentPanel({
-  gold,
-  xp,
-  level,
+  state,
   onGrant,
   onClose,
   onReset,
+  onForceUnlockPets,
+  onUpdateQuest,
 }: {
-  gold: number;
-  xp: number;
-  level: number;
+  state: GameState;
   onGrant: (xp: number, gold: number) => void;
   onClose: () => void;
   onReset: () => void;
+  onForceUnlockPets: () => void;
+  onUpdateQuest: (questId: QuestId, patch: QuestOverride) => void;
 }) {
+  const [unlocked, setUnlocked] = useState(false);
+  const [pin, setPin] = useState("");
+  const [pinError, setPinError] = useState(false);
   const [xpInput, setXpInput] = useState("50");
   const [goldInput, setGoldInput] = useState("25");
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [editId, setEditId] = useState<QuestId | null>(null);
+
+  const tryPin = () => {
+    if (pin === PARENT_PIN) {
+      setUnlocked(true);
+      setPinError(false);
+      setPin("");
+      return;
+    }
+    setPinError(true);
+    setPin("");
+  };
 
   const grantXp = () => {
     const n = Number(xpInput);
@@ -303,12 +337,153 @@ export function ParentPanel({
     onGrant(0, n);
   };
 
+  const editing = editId ? QUESTS.find((q) => q.id === editId) : null;
+  const editingResolved = editId ? getQuestById(state, editId) : null;
+
+  if (!unlocked) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-4 backdrop-blur-sm sm:items-center">
+        <div className="surface-strong w-full max-w-sm p-5 rise-in">
+          <h3 className="font-display text-xl text-ink">Grown-Up Lock</h3>
+          <p className="mt-1 text-sm text-ink-soft">
+            Enter the parent PIN to continue.
+          </p>
+          <input
+            type="password"
+            inputMode="numeric"
+            autoComplete="off"
+            maxLength={8}
+            value={pin}
+            onChange={(e) => {
+              setPin(e.target.value.replace(/\D/g, "").slice(0, 8));
+              setPinError(false);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") tryPin();
+            }}
+            className={`field mt-4 min-h-12 w-full text-center text-lg tracking-[0.35em] ${
+              pinError ? "ring-2 ring-rose-400" : ""
+            }`}
+            placeholder="••••"
+            aria-label="Parent PIN"
+          />
+          {pinError && (
+            <p className="mt-2 text-center text-sm font-semibold text-rose-600">
+              Try again
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={tryPin}
+            className="btn btn-primary mt-4 w-full"
+          >
+            Unlock
+          </button>
+          <button type="button" onClick={onClose} className="btn btn-ghost mt-2 w-full">
+            Cancel
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (confirmReset) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/50 p-4 backdrop-blur-sm sm:items-center">
+        <div className="surface-strong w-full max-w-sm p-5 text-center rise-in">
+          <h3 className="font-display text-xl text-ink">Reset everything?</h3>
+          <p className="mt-2 text-sm text-ink-soft">
+            This clears hero progress, gear, pets, and quest edits. It cannot be
+            undone.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setConfirmReset(false);
+              onReset();
+            }}
+            className="btn mt-5 w-full bg-rose-600 text-white hover:bg-rose-700"
+          >
+            Yes, reset all progress
+          </button>
+          <button
+            type="button"
+            onClick={() => setConfirmReset(false)}
+            className="btn btn-ghost mt-2 w-full"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (editing && editingResolved) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-4 backdrop-blur-sm sm:items-center">
+        <div className="surface-strong max-h-[90dvh] w-full max-w-sm overflow-y-auto p-5 rise-in">
+          <h3 className="font-display text-xl text-ink">Edit Quest</h3>
+          <p className="mt-1 text-xs text-ink-soft">{editing.category}</p>
+
+          <label className="mt-4 block text-xs font-bold uppercase tracking-wide text-ink-soft">
+            Name
+          </label>
+          <input
+            className="field mt-1 min-h-11 w-full"
+            value={editingResolved.name}
+            onChange={(e) =>
+              onUpdateQuest(editing.id, { name: e.target.value })
+            }
+          />
+
+          <label className="mt-3 block text-xs font-bold uppercase tracking-wide text-ink-soft">
+            XP
+          </label>
+          <input
+            type="number"
+            min={1}
+            inputMode="numeric"
+            className="field mt-1 min-h-11 w-full"
+            value={editingResolved.xp}
+            onChange={(e) =>
+              onUpdateQuest(editing.id, { xp: Number(e.target.value) || 1 })
+            }
+          />
+
+          <label className="mt-3 block text-xs font-bold uppercase tracking-wide text-ink-soft">
+            Coins
+          </label>
+          <input
+            type="number"
+            min={0}
+            inputMode="numeric"
+            className="field mt-1 min-h-11 w-full"
+            value={editingResolved.coins}
+            onChange={(e) =>
+              onUpdateQuest(editing.id, {
+                coins: Number(e.target.value) || 0,
+              })
+            }
+          />
+
+          <button
+            type="button"
+            onClick={() => setEditId(null)}
+            className="btn btn-primary mt-5 w-full"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-4 backdrop-blur-sm sm:items-center">
       <div className="surface-strong max-h-[90dvh] w-full max-w-sm overflow-y-auto p-5 rise-in">
         <h3 className="font-display text-xl text-ink">Grown-Up Panel</h3>
         <p className="mt-1 text-sm text-ink-soft">
-          Level {level} · {xp} XP · {gold} gold
+          Level {state.level} · {state.xp} XP · {state.gold} gold
         </p>
 
         <div className="mt-4 rounded-2xl bg-sky-1/80 p-3">
@@ -382,15 +557,78 @@ export function ParentPanel({
           </div>
         </div>
 
+        <div className="mt-3 rounded-2xl bg-teal/10 p-3">
+          <p className="text-xs font-bold uppercase tracking-wide text-ink-soft">
+            Companions
+          </p>
+          <p className="mt-1 text-xs text-ink-soft">
+            {state.petsUnlocked ? "Pets are unlocked." : "Pets are still locked."}
+          </p>
+          <button
+            type="button"
+            disabled={state.petsUnlocked}
+            onClick={onForceUnlockPets}
+            className="btn btn-secondary mt-2 min-h-10 w-full text-xs"
+          >
+            {state.petsUnlocked ? "Already unlocked" : "Force unlock pets"}
+          </button>
+        </div>
+
+        <h4 className="mt-5 font-display text-base text-ink">Quests</h4>
+        <p className="text-xs text-ink-soft">Toggle off or edit name / XP / coins.</p>
+        <div className="mt-2 flex max-h-56 flex-col gap-2 overflow-y-auto">
+          {QUESTS.map((q) => {
+            const resolved = getQuestById(state, q.id)!;
+            const disabled = Boolean(state.questOverrides[q.id]?.disabled);
+            return (
+              <div
+                key={q.id}
+                className={`surface flex items-center gap-2 p-2.5 ${
+                  disabled ? "opacity-55" : ""
+                }`}
+              >
+                <button
+                  type="button"
+                  onClick={() =>
+                    onUpdateQuest(q.id, { disabled: !disabled })
+                  }
+                  className={`min-h-9 shrink-0 rounded-xl px-2.5 text-[10px] font-bold ${
+                    disabled
+                      ? "bg-ink/10 text-ink-soft"
+                      : "bg-emerald-100 text-emerald-800"
+                  }`}
+                >
+                  {disabled ? "Off" : "On"}
+                </button>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-xs font-semibold text-ink">
+                    {resolved.name}
+                  </p>
+                  <p className="text-[10px] text-ink-soft">
+                    {resolved.xp} XP · {resolved.coins} gold
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditId(q.id)}
+                  className="btn btn-ghost min-h-9 px-2 text-[10px]"
+                >
+                  Edit
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
         <button type="button" onClick={onClose} className="btn btn-primary mt-5 w-full">
           Close
         </button>
         <button
           type="button"
-          onClick={onReset}
+          onClick={() => setConfirmReset(true)}
           className="btn btn-ghost mt-2 w-full text-rose-600"
         >
-          Reset All Progress (dev)
+          Reset All Progress
         </button>
       </div>
     </div>

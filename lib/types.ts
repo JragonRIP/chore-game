@@ -71,6 +71,18 @@ export interface PetDef {
   storePrice?: number;
 }
 
+export interface PetProgress {
+  level: number;
+  xp: number;
+}
+
+export interface QuestOverride {
+  name?: string;
+  xp?: number;
+  coins?: number;
+  disabled?: boolean;
+}
+
 export interface EquippedMap {
   helmet: GearId | null;
   chestplate: GearId | null;
@@ -108,7 +120,7 @@ export interface VaultChest {
 }
 
 export interface GameState {
-  version: 3;
+  version: 4;
   hasSeenStory: boolean;
   hero: HeroProfile | null;
   level: number;
@@ -119,6 +131,10 @@ export interface GameState {
   ownedPets: PetId[];
   equippedPet: PetId | null;
   petsUnlocked: boolean;
+  /** Per owned pet level/xp. Missing entries default to level 1. */
+  petProgress: Record<string, PetProgress>;
+  /** Parent edits to catalog quests. */
+  questOverrides: Record<string, QuestOverride>;
   activeQuests: ActiveQuest[];
   completedToday: QuestId[];
   /** Last completion timestamp per quest (for cooldowns). */

@@ -11,7 +11,11 @@ import {
   PET_CHEST_CHANCE,
   PET_DUPLICATE_COINS,
   PET_DUPLICATE_XP,
+  applyPetXpGain,
   computePetQuestExtras,
+  getPetProgress,
+  petGainsXpFromQuest,
+  petLevelMultiplier,
 } from "./pets";
 import type {
   ActiveQuest,
@@ -22,8 +26,10 @@ import type {
   LootEvent,
   PetDef,
   PetId,
+  PetProgress,
   QuestCategory,
   QuestId,
+  QuestOverride,
   Rarity,
   VaultChest,
 } from "./types";
@@ -62,7 +68,7 @@ export function makeChestId(): string {
 
 export function createInitialState(): GameState {
   return {
-    version: 3,
+    version: 4,
     hasSeenStory: false,
     hero: null,
     level: 1,
@@ -73,6 +79,8 @@ export function createInitialState(): GameState {
     ownedPets: [],
     equippedPet: null,
     petsUnlocked: false,
+    petProgress: {},
+    questOverrides: {},
     activeQuests: [],
     completedToday: [],
     questLastCompleted: {},
@@ -108,6 +116,24 @@ export function normalizeState(raw: unknown): GameState {
       ? equippedPetRaw
       : null;
 
+  const rawProgress =
+    r.petProgress &&
+    typeof r.petProgress === "object" &&
+    !Array.isArray(r.petProgress)
+      ? (r.petProgress as Record<string, PetProgress>)
+      : {};
+  const petProgress: Record<string, PetProgress> = {};
+  for (const id of ownedPets) {
+    petProgress[id] = getPetProgress(rawProgress, id);
+  }
+
+  const questOverrides =
+    r.questOverrides &&
+    typeof r.questOverrides === "object" &&
+    !Array.isArray(r.questOverrides)
+      ? (r.questOverrides as Record<string, QuestOverride>)
+      : {};
+
   let next: GameState = {
     ...base,
     hasSeenStory: Boolean(r.hasSeenStory),
@@ -123,6 +149,8 @@ export function normalizeState(raw: unknown): GameState {
     ownedPets,
     equippedPet,
     petsUnlocked: Boolean(r.petsUnlocked) || ownedPets.length > 0,
+    petProgress,
+    questOverrides,
     activeQuests,
     completedToday: Array.isArray(r.completedToday)
       ? (r.completedToday as string[])
@@ -198,9 +226,11 @@ export function computeBonuses(
 
   const pet = getEquippedPet(state);
   if (pet) {
-    xpPct += pet.xpBonusPct;
-    coins += pet.coinBonus;
-    const extras = computePetQuestExtras(pet, questCategory);
+    const petLv = getPetProgress(state.petProgress, pet.id).level;
+    const mult = petLevelMultiplier(petLv);
+    xpPct += Math.round(pet.xpBonusPct * mult);
+    coins += Math.round(pet.coinBonus * mult);
+    const extras = computePetQuestExtras(pet, questCategory, petLv);
     xpPct += extras.xpPct;
     coins += extras.coins;
   }
@@ -238,6 +268,8 @@ export function applyQuestRewards(
   gainedCoins: number;
   levelsGained: number[];
   chests: VaultChest[];
+  petXpGained: number;
+  petLevelsGained: number[];
 } {
   const bonuses = computeBonuses(state, questCategory);
   const gainedXp = Math.max(
@@ -267,12 +299,32 @@ export function applyQuestRewards(
     });
   }
 
+  let petProgress = { ...state.petProgress };
+  let petXpGained = 0;
+  let petLevelsGained: number[] = [];
+
+  const pet = getEquippedPet(state);
+  if (
+    pet &&
+    questCategory &&
+    petGainsXpFromQuest(pet.species, questCategory)
+  ) {
+    const current = getPetProgress(petProgress, pet.id);
+    const petXp = Math.max(1, Math.round(gainedXp * 0.5));
+    const applied = applyPetXpGain(current, petXp);
+    petProgress = { ...petProgress, [pet.id]: applied.progress };
+    petXpGained = applied.xpGained;
+    petLevelsGained = applied.levelsGained;
+  }
+
   return {
-    state: { ...state, level, xp, gold },
+    state: { ...state, level, xp, gold, petProgress },
     gainedXp,
     gainedCoins,
     levelsGained,
     chests,
+    petXpGained,
+    petLevelsGained,
   };
 }
 

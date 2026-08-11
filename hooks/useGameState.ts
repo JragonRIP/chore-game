@@ -17,8 +17,8 @@ import {
   todayKey,
   xpToNextLevel,
 } from "@/lib/math";
-import { PET_BY_ID } from "@/lib/pets";
-import { QUESTS } from "@/lib/quests";
+import { defaultPetProgress, getPetProgress, PET_BY_ID } from "@/lib/pets";
+import { getQuestById } from "@/lib/questResolve";
 import { loadGame, saveGame } from "@/lib/storage";
 import type {
   AvatarId,
@@ -27,11 +27,14 @@ import type {
   LootEvent,
   PetId,
   QuestId,
+  QuestOverride,
   ScreenPhase,
   Slot,
   TabId,
   VaultChest,
 } from "@/lib/types";
+
+export const PARENT_PIN = "5869";
 
 export interface Celebration {
   xp: number;
@@ -40,6 +43,8 @@ export interface Celebration {
   levels: number[];
   chestsEarned: number;
   equippedPetId: PetId | null;
+  petXp: number;
+  petLevels: number[];
 }
 
 export function useGameState() {
@@ -128,8 +133,9 @@ export function useGameState() {
   const startQuest = useCallback((id: QuestId) => {
     setState((s) => {
       if (!s) return s;
-      const quest = QUESTS.find((q) => q.id === id);
-      if (!quest || !canStartQuest(s, quest)) return s;
+      const quest = getQuestById(s, id);
+      if (!quest || s.questOverrides[id]?.disabled) return s;
+      if (!canStartQuest(s, quest)) return s;
       return {
         ...s,
         activeQuests: [
@@ -141,12 +147,11 @@ export function useGameState() {
   }, []);
 
   const completeQuest = useCallback((id: QuestId) => {
-    const quest = QUESTS.find((q) => q.id === id);
-    if (!quest) return false;
-
     let ok = false;
     setState((s) => {
       if (!s) return s;
+      const quest = getQuestById(s, id);
+      if (!quest || s.questOverrides[id]?.disabled) return s;
       if (isQuestFullyDoneToday(s, quest)) return s;
       if (questCooldownRemainingMs(s, quest) > 0) return s;
       const active = s.activeQuests.find((q) => q.questId === id);
@@ -167,6 +172,8 @@ export function useGameState() {
           levels: rewarded.levelsGained,
           chestsEarned: rewarded.chests.length,
           equippedPetId: s.equippedPet,
+          petXp: rewarded.petXpGained,
+          petLevels: rewarded.petLevelsGained,
         });
         if (unlockingPets) pendingPetsUnlock.current = true;
       });
@@ -247,6 +254,11 @@ export function useGameState() {
         return {
           ...s,
           ownedPets: [...s.ownedPets, event.petId],
+          petProgress: {
+            ...s.petProgress,
+            [event.petId]:
+              s.petProgress[event.petId] ?? defaultPetProgress(),
+          },
           vaultChests: withoutChest,
         };
       }
@@ -310,6 +322,10 @@ export function useGameState() {
         ...s,
         gold: s.gold - pet.storePrice!,
         ownedPets: [...s.ownedPets, petId],
+        petProgress: {
+          ...s.petProgress,
+          [petId]: s.petProgress[petId] ?? defaultPetProgress(),
+        },
       };
     });
   }, []);
@@ -335,7 +351,14 @@ export function useGameState() {
   const equipPet = useCallback((petId: PetId) => {
     setState((s) => {
       if (!s || !s.petsUnlocked || !s.ownedPets.includes(petId)) return s;
-      return { ...s, equippedPet: petId };
+      return {
+        ...s,
+        equippedPet: petId,
+        petProgress: {
+          ...s.petProgress,
+          [petId]: getPetProgress(s.petProgress, petId),
+        },
+      };
     });
   }, []);
 
@@ -359,6 +382,39 @@ export function useGameState() {
       };
     });
   }, []);
+
+  const parentForceUnlockPets = useCallback(() => {
+    setState((s) => (s ? { ...s, petsUnlocked: true } : s));
+  }, []);
+
+  const parentUpdateQuest = useCallback(
+    (questId: QuestId, patch: QuestOverride) => {
+      setState((s) => {
+        if (!s) return s;
+        const prev = s.questOverrides[questId] ?? {};
+        const next: QuestOverride = { ...prev, ...patch };
+        if (typeof next.name === "string" && !next.name.trim()) {
+          delete next.name;
+        }
+        if (next.disabled === false) delete next.disabled;
+        const cleaned: QuestOverride = {};
+        if (next.name) cleaned.name = next.name.trim().slice(0, 40);
+        if (typeof next.xp === "number") cleaned.xp = Math.max(1, Math.floor(next.xp));
+        if (typeof next.coins === "number")
+          cleaned.coins = Math.max(0, Math.floor(next.coins));
+        if (next.disabled) cleaned.disabled = true;
+
+        const questOverrides = { ...s.questOverrides };
+        if (Object.keys(cleaned).length === 0) {
+          delete questOverrides[questId];
+        } else {
+          questOverrides[questId] = cleaned;
+        }
+        return { ...s, questOverrides };
+      });
+    },
+    [],
+  );
 
   const onLevelBadgeTap = useCallback(() => {
     levelTaps.current += 1;
@@ -415,6 +471,8 @@ export function useGameState() {
     equipPet,
     unequipPet,
     parentGrant,
+    parentForceUnlockPets,
+    parentUpdateQuest,
     parentOpen,
     setParentOpen,
     onLevelBadgeTap,

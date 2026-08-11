@@ -1,4 +1,11 @@
-import type { PetDef, PetSpecies, QuestCategory, Rarity } from "./types";
+import type {
+  PetDef,
+  PetProgress,
+  PetSpecies,
+  QuestCategory,
+  PetId,
+  Rarity,
+} from "./types";
 import { RARITY_ORDER } from "./gear";
 
 export const PET_SPECIES: PetSpecies[] = [
@@ -175,16 +182,90 @@ export function getDailyStorePets(dateKey: string): PetDef[] {
 export function computePetQuestExtras(
   pet: PetDef | null | undefined,
   category: QuestCategory | undefined,
+  petLevel = 1,
 ): { xpPct: number; coins: number } {
   if (!pet) return { xpPct: 0, coins: 0 };
   const trait = TRAIT_BY_RARITY[pet.rarity];
+  const mult = petLevelMultiplier(petLevel);
   let xpPct = 0;
   let coins = 0;
   if (pet.species === "lizard" && category === "Cleaning") {
-    coins += trait.cleaningCoins;
+    coins += Math.round(trait.cleaningCoins * mult);
   }
   if (pet.species === "wolf" && category === "Outdoor") {
-    xpPct += trait.outdoorXpPct;
+    xpPct += Math.round(trait.outdoorXpPct * mult);
   }
   return { xpPct, coins };
+}
+
+export const MAX_PET_LEVEL = 10;
+
+/** XP needed to go from `level` → `level + 1`. */
+export function petXpToNextLevel(level: number): number {
+  if (level >= MAX_PET_LEVEL) return Infinity;
+  return 20 + (level - 1) * 20; // 20, 40, 60 … 200
+}
+
+/** Bonus multiplier from pet level (level 1 = 1.0, +8% per level). */
+export function petLevelMultiplier(level: number): number {
+  const lv = Math.max(1, Math.min(MAX_PET_LEVEL, Math.floor(level) || 1));
+  return 1 + (lv - 1) * 0.08;
+}
+
+export function defaultPetProgress(): PetProgress {
+  return { level: 1, xp: 0 };
+}
+
+export function getPetProgress(
+  progress: Record<string, PetProgress> | undefined,
+  petId: PetId,
+): PetProgress {
+  const p = progress?.[petId];
+  if (!p) return defaultPetProgress();
+  return {
+    level: Math.max(1, Math.min(MAX_PET_LEVEL, Math.floor(p.level) || 1)),
+    xp: Math.max(0, Math.floor(p.xp) || 0),
+  };
+}
+
+/** Whether this quest can grant XP to the equipped pet species. */
+export function petGainsXpFromQuest(
+  species: PetSpecies,
+  category: QuestCategory,
+): boolean {
+  if (species === "lizard") return category === "Cleaning";
+  if (species === "wolf") return category === "Outdoor";
+  // Lion & dragon: Pets chores only
+  return category === "Pets";
+}
+
+export function applyPetXpGain(
+  progress: PetProgress,
+  xpGain: number,
+): { progress: PetProgress; levelsGained: number[]; xpGained: number } {
+  const gain = Math.max(0, Math.floor(xpGain));
+  if (gain <= 0 || progress.level >= MAX_PET_LEVEL) {
+    return { progress, levelsGained: [], xpGained: 0 };
+  }
+
+  let level = progress.level;
+  let xp = progress.xp + gain;
+  const levelsGained: number[] = [];
+
+  while (level < MAX_PET_LEVEL && xp >= petXpToNextLevel(level)) {
+    xp -= petXpToNextLevel(level);
+    level += 1;
+    levelsGained.push(level);
+  }
+
+  if (level >= MAX_PET_LEVEL) {
+    level = MAX_PET_LEVEL;
+    xp = 0;
+  }
+
+  return {
+    progress: { level, xp },
+    levelsGained,
+    xpGained: gain,
+  };
 }

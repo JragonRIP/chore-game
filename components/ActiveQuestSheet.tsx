@@ -2,26 +2,28 @@
 
 import { useEffect, useState } from "react";
 import { GoldCoin } from "@/components/GoldCoin";
-import { QUESTS } from "@/lib/quests";
+import { getQuestById } from "@/lib/questResolve";
 import {
   canCompleteQuest,
   formatCountdown,
   questRemainingMs,
 } from "@/lib/math";
-import type { ActiveQuest, QuestId } from "@/lib/types";
+import type { ActiveQuest, GameState, QuestId } from "@/lib/types";
 
 export function ActiveQuestSheet({
   questId,
   active,
+  state,
   onClose,
   onComplete,
 }: {
   questId: QuestId;
   active: ActiveQuest | undefined;
+  state: GameState;
   onClose: () => void;
   onComplete: (id: QuestId) => void;
 }) {
-  const quest = QUESTS.find((q) => q.id === questId);
+  const quest = getQuestById(state, questId);
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {

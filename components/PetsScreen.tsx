@@ -4,7 +4,14 @@ import { useMemo } from "react";
 import { HeroSprite } from "@/components/HeroSprite";
 import { PetIcon, PetSprite } from "@/components/PetIcon";
 import { RarityBadge } from "@/components/PixelGearIcon";
-import { PET_BY_ID, PET_TRAIT_LABELS } from "@/lib/pets";
+import {
+  getPetProgress,
+  MAX_PET_LEVEL,
+  PET_BY_ID,
+  PET_TRAIT_LABELS,
+  petLevelMultiplier,
+  petXpToNextLevel,
+} from "@/lib/pets";
 import type { GameState, PetId } from "@/lib/types";
 
 export function PetsScreen({
@@ -19,6 +26,9 @@ export function PetsScreen({
   const hero = state.hero!;
   const equipped = state.equippedPet
     ? PET_BY_ID[state.equippedPet]
+    : null;
+  const equippedProgress = equipped
+    ? getPetProgress(state.petProgress, equipped.id)
     : null;
 
   const owned = useMemo(
@@ -47,11 +57,29 @@ export function PetsScreen({
     );
   }
 
+  const equippedMult = equippedProgress
+    ? petLevelMultiplier(equippedProgress.level)
+    : 1;
+  const equippedXpBonus = equipped
+    ? Math.round(equipped.xpBonusPct * equippedMult)
+    : 0;
+  const equippedCoinBonus = equipped
+    ? Math.round(equipped.coinBonus * equippedMult)
+    : 0;
+  const equippedXpNeeded =
+    equippedProgress && equippedProgress.level < MAX_PET_LEVEL
+      ? petXpToNextLevel(equippedProgress.level)
+      : 0;
+  const equippedXpPct =
+    equippedProgress && equippedXpNeeded > 0
+      ? Math.min(100, (equippedProgress.xp / equippedXpNeeded) * 100)
+      : 100;
+
   return (
     <div className="mx-auto w-full max-w-lg px-3 pb-5 pt-4">
       <h2 className="font-display text-2xl text-ink">Companions</h2>
       <p className="mt-0.5 text-sm text-ink-soft">
-        Equip one loyal sidekick for a premium power boost.
+        Equip one loyal sidekick. Matching chores raise its level.
       </p>
 
       <div className="surface-strong mt-4 flex flex-col items-center px-3 py-5">
@@ -69,21 +97,44 @@ export function PetsScreen({
           )}
         </div>
         <p className="mt-3 font-display text-base text-ink">{hero.name}</p>
-        {equipped ? (
-          <div className="mt-2 text-center">
+        {equipped && equippedProgress ? (
+          <div className="mt-2 w-full max-w-xs text-center">
             <p className="font-display text-sm text-teal-deep">{equipped.name}</p>
             <div className="mt-1.5 flex flex-wrap items-center justify-center gap-1.5">
               <RarityBadge rarity={equipped.rarity} />
+              <span className="rounded-full bg-teal/15 px-2.5 py-0.5 text-[10px] font-bold text-teal-deep">
+                Pet Lv {equippedProgress.level}
+              </span>
               <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700">
-                +{equipped.xpBonusPct}% XP
+                +{equippedXpBonus}% XP
               </span>
               <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-bold text-amber-800">
-                +{equipped.coinBonus} gold
+                +{equippedCoinBonus} gold
               </span>
             </div>
             <p className="mt-2 text-xs font-semibold text-ink-soft">
               {PET_TRAIT_LABELS[equipped.species]}
             </p>
+            <div className="mt-3 text-left">
+              <div className="mb-1 flex items-center justify-between text-[10px] font-bold text-ink-soft">
+                <span>Pet XP</span>
+                <span>
+                  {equippedProgress.level >= MAX_PET_LEVEL
+                    ? "MAX"
+                    : `${equippedProgress.xp}/${equippedXpNeeded}`}
+                </span>
+              </div>
+              <div className="progress-track">
+                <div
+                  className="progress-fill"
+                  style={{
+                    width: `${equippedXpPct}%`,
+                    background:
+                      "linear-gradient(90deg, #14b8a6, #0d9488)",
+                  }}
+                />
+              </div>
+            </div>
           </div>
         ) : (
           <p className="mt-2 text-sm text-ink-soft">No companion equipped</p>
@@ -99,6 +150,14 @@ export function PetsScreen({
         )}
         {owned.map((pet) => {
           const isEquipped = state.equippedPet === pet.id;
+          const progress = getPetProgress(state.petProgress, pet.id);
+          const needed =
+            progress.level < MAX_PET_LEVEL
+              ? petXpToNextLevel(progress.level)
+              : 0;
+          const pct =
+            needed > 0 ? Math.min(100, (progress.xp / needed) * 100) : 100;
+          const mult = petLevelMultiplier(progress.level);
           return (
             <div key={pet.id} className="surface flex items-center gap-3 p-3">
               <PetIcon pet={pet} size={52} />
@@ -108,9 +167,22 @@ export function PetsScreen({
                 </p>
                 <div className="mt-1 flex flex-wrap items-center gap-1.5">
                   <RarityBadge rarity={pet.rarity} />
-                  <span className="text-xs font-semibold text-emerald-700">
-                    +{pet.xpBonusPct}% XP
+                  <span className="text-[10px] font-bold text-teal-deep">
+                    Lv {progress.level}
                   </span>
+                  <span className="text-xs font-semibold text-emerald-700">
+                    +{Math.round(pet.xpBonusPct * mult)}% XP
+                  </span>
+                </div>
+                <div className="progress-track mt-1.5 h-1.5">
+                  <div
+                    className="progress-fill h-1.5"
+                    style={{
+                      width: `${pct}%`,
+                      background:
+                        "linear-gradient(90deg, #14b8a6, #0d9488)",
+                    }}
+                  />
                 </div>
                 <p className="mt-1 text-[10px] font-semibold text-ink-soft">
                   {pet.traitLabel}
