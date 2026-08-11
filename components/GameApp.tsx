@@ -31,7 +31,6 @@ export function GameApp() {
   const online = useOnline({
     state: g.state,
     replaceState: g.replaceState,
-    patchGold: g.patchGold,
   });
 
   const friendsBadge = useMemo(() => {

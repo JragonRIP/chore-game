@@ -1,11 +1,52 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { GoldCoin } from "@/components/GoldCoin";
 import type { useOnline } from "@/hooks/useOnline";
+import { DUPLICATE_COINS, GEAR_BY_ID } from "@/lib/gear";
+import { ALL_PETS, PET_DUPLICATE_COINS } from "@/lib/pets";
+import type { ClaimGiftResult, GiftType } from "@/lib/online";
 import type { GameState } from "@/lib/types";
 
 type OnlineApi = ReturnType<typeof useOnline>;
+
+const PET_BY_ID = Object.fromEntries(ALL_PETS.map((p) => [p.id, p]));
+
+function giftLabel(g: {
+  gift_type: GiftType;
+  gold: number | null;
+  gear_id: string | null;
+  pet_id: string | null;
+  chest_json: { type?: string } | null;
+}): string {
+  if (g.gift_type === "gold") return `${g.gold ?? 0} gold`;
+  if (g.gift_type === "gear") {
+    return GEAR_BY_ID[g.gear_id ?? ""]?.name ?? "Gear";
+  }
+  if (g.gift_type === "pet") {
+    return PET_BY_ID[g.pet_id ?? ""]?.name ?? "Pet";
+  }
+  const t = g.chest_json?.type === "legendary" ? "Legendary" : "Normal";
+  return `${t} chest`;
+}
+
+function claimToast(result: ClaimGiftResult): string {
+  if (result.kind === "gold") return `Claimed ${result.gold} gold!`;
+  if (result.kind === "gear") {
+    return `Got ${GEAR_BY_ID[result.gearId]?.name ?? "gear"}!`;
+  }
+  if (result.kind === "gear-dupe") {
+    return `Already owned — +${result.gold} gold!`;
+  }
+  if (result.kind === "pet") {
+    return `Got ${PET_BY_ID[result.petId]?.name ?? "pet"}!`;
+  }
+  if (result.kind === "pet-dupe") {
+    return `Already owned — +${result.gold} gold!`;
+  }
+  const t = result.chest.type === "legendary" ? "Legendary" : "Normal";
+  return `${t} chest added to vault!`;
+}
 
 export function FriendsPanel({
   open,
@@ -23,8 +64,30 @@ export function FriendsPanel({
   const [pin, setPin] = useState("");
   const [displayName, setDisplayName] = useState(state.hero?.name ?? "");
   const [friendCode, setFriendCode] = useState("");
+  const [giftType, setGiftType] = useState<Record<string, GiftType>>({});
   const [giftAmounts, setGiftAmounts] = useState<Record<string, string>>({});
+  const [giftGear, setGiftGear] = useState<Record<string, string>>({});
+  const [giftPet, setGiftPet] = useState<Record<string, string>>({});
+  const [giftChest, setGiftChest] = useState<Record<string, string>>({});
   const [toast, setToast] = useState<string | null>(null);
+
+  const ownedGear = useMemo(
+    () =>
+      state.ownedGear
+        .map((id) => GEAR_BY_ID[id])
+        .filter(Boolean)
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [state.ownedGear],
+  );
+
+  const ownedPets = useMemo(
+    () =>
+      state.ownedPets
+        .map((id) => PET_BY_ID[id])
+        .filter(Boolean)
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [state.ownedPets],
+  );
 
   if (!open) return null;
 
@@ -33,6 +96,9 @@ export function FriendsPanel({
     window.setTimeout(() => setToast(null), 2500);
   };
 
+  const typeFor = (playerId: string): GiftType =>
+    giftType[playerId] ?? "gold";
+
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-4 backdrop-blur-sm sm:items-center">
       <div className="surface-strong max-h-[90dvh] w-full max-w-md overflow-y-auto p-5 rise-in">
@@ -40,7 +106,7 @@ export function FriendsPanel({
           <div>
             <h3 className="font-display text-xl text-ink">Friends</h3>
             <p className="mt-0.5 text-sm text-ink-soft">
-              Sign in, add friends, send gold gifts.
+              Sign in, add friends, gift gold, gear, pets, or chests.
             </p>
           </div>
           <button type="button" onClick={onClose} className="btn btn-ghost min-h-10 px-3 text-sm">
@@ -191,8 +257,8 @@ export function FriendsPanel({
                           From {g.from_name ?? "a friend"}
                         </p>
                         <p className="inline-flex items-center gap-1 text-sm text-amber-800">
-                          <GoldCoin size={14} />
-                          {g.gold}
+                          {g.gift_type === "gold" && <GoldCoin size={14} />}
+                          {giftLabel(g)}
                         </p>
                       </div>
                       <button
@@ -202,8 +268,8 @@ export function FriendsPanel({
                         onClick={() => {
                           void (async () => {
                             try {
-                              const n = await online.claimGift(g.id);
-                              showToast(`Claimed ${n} gold!`);
+                              const result = await online.claimGift(g.id);
+                              showToast(claimToast(result));
                             } catch {
                               /* shown */
                             }
@@ -258,72 +324,277 @@ export function FriendsPanel({
                 </p>
               )}
               <div className="mt-2 flex flex-col gap-2">
-                {online.friends.map((f) => (
-                  <div key={f.friendshipId} className="surface p-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <div>
-                        <p className="font-display text-sm text-ink">
-                          {f.displayName}
-                        </p>
-                        <p className="text-xs text-ink-soft">
-                          @{f.username} · {f.friendCode}
-                        </p>
+                {online.friends.map((f) => {
+                  const t = typeFor(f.playerId);
+                  return (
+                    <div key={f.friendshipId} className="surface p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <div>
+                          <p className="font-display text-sm text-ink">
+                            {f.displayName}
+                          </p>
+                          <p className="text-xs text-ink-soft">
+                            @{f.username} · {f.friendCode}
+                          </p>
+                        </div>
+                        {f.status === "pending" && f.incoming && (
+                          <button
+                            type="button"
+                            disabled={online.busy}
+                            className="btn btn-secondary min-h-10 px-3 text-xs"
+                            onClick={() => {
+                              void online.acceptFriend(f.friendshipId);
+                            }}
+                          >
+                            Accept
+                          </button>
+                        )}
+                        {f.status === "pending" && !f.incoming && (
+                          <span className="text-xs font-semibold text-amber-700">
+                            Pending
+                          </span>
+                        )}
                       </div>
-                      {f.status === "pending" && f.incoming && (
-                        <button
-                          type="button"
-                          disabled={online.busy}
-                          className="btn btn-secondary min-h-10 px-3 text-xs"
-                          onClick={() => {
-                            void online.acceptFriend(f.friendshipId);
-                          }}
-                        >
-                          Accept
-                        </button>
-                      )}
-                      {f.status === "pending" && !f.incoming && (
-                        <span className="text-xs font-semibold text-amber-700">
-                          Pending
-                        </span>
+                      {f.status === "accepted" && (
+                        <div className="mt-2 space-y-2">
+                          <div className="flex flex-wrap gap-1">
+                            {(
+                              [
+                                ["gold", "Gold"],
+                                ["gear", "Gear"],
+                                ["pet", "Pet"],
+                                ["chest", "Chest"],
+                              ] as const
+                            ).map(([id, label]) => (
+                              <button
+                                key={id}
+                                type="button"
+                                className={`chip text-xs ${t === id ? "chip-active" : ""}`}
+                                onClick={() =>
+                                  setGiftType((m) => ({
+                                    ...m,
+                                    [f.playerId]: id,
+                                  }))
+                                }
+                              >
+                                {label}
+                              </button>
+                            ))}
+                          </div>
+
+                          {t === "gold" && (
+                            <div className="flex gap-2">
+                              <input
+                                className="field min-h-10 flex-1"
+                                inputMode="numeric"
+                                placeholder="Gold"
+                                value={giftAmounts[f.playerId] ?? "25"}
+                                onChange={(e) =>
+                                  setGiftAmounts((m) => ({
+                                    ...m,
+                                    [f.playerId]: e.target.value.replace(
+                                      /\D/g,
+                                      "",
+                                    ),
+                                  }))
+                                }
+                              />
+                              <button
+                                type="button"
+                                disabled={online.busy}
+                                className="btn btn-primary min-h-10 gap-1 px-3 text-xs"
+                                onClick={() => {
+                                  const amount = Number(
+                                    giftAmounts[f.playerId] ?? 25,
+                                  );
+                                  void (async () => {
+                                    try {
+                                      await online.giftGold(f.playerId, amount);
+                                      showToast(`Sent ${amount} gold!`);
+                                    } catch {
+                                      /* shown */
+                                    }
+                                  })();
+                                }}
+                              >
+                                <GoldCoin size={14} />
+                                Send
+                              </button>
+                            </div>
+                          )}
+
+                          {t === "gear" && (
+                            <div className="flex gap-2">
+                              <select
+                                className="field min-h-10 flex-1 text-sm"
+                                value={giftGear[f.playerId] ?? ""}
+                                onChange={(e) =>
+                                  setGiftGear((m) => ({
+                                    ...m,
+                                    [f.playerId]: e.target.value,
+                                  }))
+                                }
+                              >
+                                <option value="">Pick gear…</option>
+                                {ownedGear.map((g) => (
+                                  <option key={g.id} value={g.id}>
+                                    {g.name}
+                                    {Object.values(state.equipped).includes(g.id)
+                                      ? " (equipped)"
+                                      : ""}
+                                  </option>
+                                ))}
+                              </select>
+                              <button
+                                type="button"
+                                disabled={online.busy || !giftGear[f.playerId]}
+                                className="btn btn-primary min-h-10 px-3 text-xs"
+                                onClick={() => {
+                                  const gearId = giftGear[f.playerId];
+                                  const gear = GEAR_BY_ID[gearId];
+                                  if (!gear) return;
+                                  void (async () => {
+                                    try {
+                                      await online.giftGear(
+                                        f.playerId,
+                                        gearId,
+                                        DUPLICATE_COINS[gear.rarity],
+                                      );
+                                      setGiftGear((m) => ({
+                                        ...m,
+                                        [f.playerId]: "",
+                                      }));
+                                      showToast(`Sent ${gear.name}!`);
+                                    } catch {
+                                      /* shown */
+                                    }
+                                  })();
+                                }}
+                              >
+                                Send
+                              </button>
+                            </div>
+                          )}
+
+                          {t === "pet" && (
+                            <div className="flex gap-2">
+                              <select
+                                className="field min-h-10 flex-1 text-sm"
+                                value={giftPet[f.playerId] ?? ""}
+                                onChange={(e) =>
+                                  setGiftPet((m) => ({
+                                    ...m,
+                                    [f.playerId]: e.target.value,
+                                  }))
+                                }
+                              >
+                                <option value="">Pick pet…</option>
+                                {ownedPets.map((p) => (
+                                  <option key={p.id} value={p.id}>
+                                    {p.name}
+                                    {state.equippedPet === p.id
+                                      ? " (active)"
+                                      : ""}
+                                  </option>
+                                ))}
+                              </select>
+                              <button
+                                type="button"
+                                disabled={online.busy || !giftPet[f.playerId]}
+                                className="btn btn-primary min-h-10 px-3 text-xs"
+                                onClick={() => {
+                                  const petId = giftPet[f.playerId];
+                                  const pet = PET_BY_ID[petId];
+                                  if (!pet) return;
+                                  void (async () => {
+                                    try {
+                                      await online.giftPet(
+                                        f.playerId,
+                                        petId,
+                                        PET_DUPLICATE_COINS[pet.rarity],
+                                      );
+                                      setGiftPet((m) => ({
+                                        ...m,
+                                        [f.playerId]: "",
+                                      }));
+                                      showToast(`Sent ${pet.name}!`);
+                                    } catch {
+                                      /* shown */
+                                    }
+                                  })();
+                                }}
+                              >
+                                Send
+                              </button>
+                            </div>
+                          )}
+
+                          {t === "chest" && (
+                            <div className="flex gap-2">
+                              <select
+                                className="field min-h-10 flex-1 text-sm"
+                                value={giftChest[f.playerId] ?? ""}
+                                onChange={(e) =>
+                                  setGiftChest((m) => ({
+                                    ...m,
+                                    [f.playerId]: e.target.value,
+                                  }))
+                                }
+                              >
+                                <option value="">Pick chest…</option>
+                                {state.vaultChests.map((c) => (
+                                  <option key={c.id} value={c.id}>
+                                    {c.type === "legendary"
+                                      ? "Legendary"
+                                      : "Normal"}{" "}
+                                    — {c.reason}
+                                  </option>
+                                ))}
+                              </select>
+                              <button
+                                type="button"
+                                disabled={
+                                  online.busy || !giftChest[f.playerId]
+                                }
+                                className="btn btn-primary min-h-10 px-3 text-xs"
+                                onClick={() => {
+                                  const chestId = giftChest[f.playerId];
+                                  if (!chestId) return;
+                                  void (async () => {
+                                    try {
+                                      await online.giftChest(
+                                        f.playerId,
+                                        chestId,
+                                      );
+                                      setGiftChest((m) => ({
+                                        ...m,
+                                        [f.playerId]: "",
+                                      }));
+                                      showToast("Chest sent!");
+                                    } catch {
+                                      /* shown */
+                                    }
+                                  })();
+                                }}
+                              >
+                                Send
+                              </button>
+                            </div>
+                          )}
+
+                          {(t === "gear" && ownedGear.length === 0) ||
+                          (t === "pet" && ownedPets.length === 0) ||
+                          (t === "chest" &&
+                            state.vaultChests.length === 0) ? (
+                            <p className="text-xs text-ink-soft">
+                              Nothing to gift in this category yet.
+                            </p>
+                          ) : null}
+                        </div>
                       )}
                     </div>
-                    {f.status === "accepted" && (
-                      <div className="mt-2 flex gap-2">
-                        <input
-                          className="field min-h-10 flex-1"
-                          inputMode="numeric"
-                          placeholder="Gold"
-                          value={giftAmounts[f.playerId] ?? "25"}
-                          onChange={(e) =>
-                            setGiftAmounts((m) => ({
-                              ...m,
-                              [f.playerId]: e.target.value.replace(/\D/g, ""),
-                            }))
-                          }
-                        />
-                        <button
-                          type="button"
-                          disabled={online.busy}
-                          className="btn btn-primary min-h-10 gap-1 px-3 text-xs"
-                          onClick={() => {
-                            const amount = Number(giftAmounts[f.playerId] ?? 25);
-                            void (async () => {
-                              try {
-                                await online.giftGold(f.playerId, amount);
-                                showToast(`Sent ${amount} gold!`);
-                              } catch {
-                                /* shown */
-                              }
-                            })();
-                          }}
-                        >
-                          <GoldCoin size={14} />
-                          Gift
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 

@@ -4,16 +4,21 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   acceptFriendRequest,
   addFriendByCode,
-  claimGoldGift,
+  claimGift as claimGiftRpc,
   fetchMyPlayer,
   listFriends,
   listIncomingGifts,
   migrateOrLoadCloudSave,
+  pullCloudSave,
   pushCloudSave,
+  sendChestGift,
+  sendGearGift,
   sendGoldGift,
+  sendPetGift,
   signInAccount,
   signOutAccount,
   signUpAccount,
+  type ClaimGiftResult,
   type FriendEntry,
   type GiftRow,
   type PlayerRow,
@@ -24,9 +29,8 @@ import type { GameState } from "@/lib/types";
 export function useOnline(opts: {
   state: GameState | null;
   replaceState: (next: GameState) => void;
-  patchGold: (delta: number) => void;
 }) {
-  const { state, replaceState, patchGold } = opts;
+  const { state, replaceState } = opts;
   const [configured] = useState(() => isOnlineConfigured());
   const [ready, setReady] = useState(false);
   const [player, setPlayer] = useState<PlayerRow | null>(null);
@@ -47,6 +51,11 @@ export function useOnline(opts: {
       setError(e instanceof Error ? e.message : "Could not load friends.");
     }
   }, [configured]);
+
+  const syncFromCloud = useCallback(async () => {
+    const cloud = await pullCloudSave();
+    if (cloud) replaceState(cloud);
+  }, [replaceState]);
 
   const bootstrap = useCallback(async () => {
     if (!configured) {
@@ -182,18 +191,15 @@ export function useOnline(opts: {
     [refreshSocial],
   );
 
-  const giftGold = useCallback(
-    async (toPlayerId: string, amount: number) => {
-      if (!state || state.gold < amount) {
-        throw new Error("Not enough gold.");
-      }
+  const runGift = useCallback(
+    async (fn: () => Promise<void>) => {
+      if (!state) throw new Error("Game not ready.");
       setBusy(true);
       setError(null);
       try {
-        // Sync current gold to cloud before server deducts
         await pushCloudSave(state);
-        await sendGoldGift(toPlayerId, amount);
-        patchGold(-amount);
+        await fn();
+        await syncFromCloud();
         await refreshSocial();
       } catch (e) {
         setError(e instanceof Error ? e.message : "Gift failed.");
@@ -202,18 +208,58 @@ export function useOnline(opts: {
         setBusy(false);
       }
     },
-    [state, patchGold, refreshSocial],
+    [state, syncFromCloud, refreshSocial],
+  );
+
+  const giftGold = useCallback(
+    async (toPlayerId: string, amount: number) => {
+      if (!state || state.gold < amount) {
+        throw new Error("Not enough gold.");
+      }
+      await runGift(() => sendGoldGift(toPlayerId, amount));
+    },
+    [state, runGift],
+  );
+
+  const giftGear = useCallback(
+    async (toPlayerId: string, gearId: string, dupeGold: number) => {
+      if (!state?.ownedGear.includes(gearId)) {
+        throw new Error("You do not own that gear.");
+      }
+      await runGift(() => sendGearGift(toPlayerId, gearId, dupeGold));
+    },
+    [state, runGift],
+  );
+
+  const giftPet = useCallback(
+    async (toPlayerId: string, petId: string, dupeGold: number) => {
+      if (!state?.ownedPets.includes(petId)) {
+        throw new Error("You do not own that pet.");
+      }
+      await runGift(() => sendPetGift(toPlayerId, petId, dupeGold));
+    },
+    [state, runGift],
+  );
+
+  const giftChest = useCallback(
+    async (toPlayerId: string, chestId: string) => {
+      if (!state?.vaultChests.some((c) => c.id === chestId)) {
+        throw new Error("Chest not found in your vault.");
+      }
+      await runGift(() => sendChestGift(toPlayerId, chestId));
+    },
+    [state, runGift],
   );
 
   const claimGift = useCallback(
-    async (giftId: string) => {
+    async (giftId: string): Promise<ClaimGiftResult> => {
       setBusy(true);
       setError(null);
       try {
-        const amount = await claimGoldGift(giftId);
-        patchGold(amount);
+        const result = await claimGiftRpc(giftId);
+        await syncFromCloud();
         await refreshSocial();
-        return amount;
+        return result;
       } catch (e) {
         setError(e instanceof Error ? e.message : "Claim failed.");
         throw e;
@@ -221,7 +267,7 @@ export function useOnline(opts: {
         setBusy(false);
       }
     },
-    [patchGold, refreshSocial],
+    [syncFromCloud, refreshSocial],
   );
 
   return {
@@ -239,6 +285,9 @@ export function useOnline(opts: {
     addFriend,
     acceptFriend,
     giftGold,
+    giftGear,
+    giftPet,
+    giftChest,
     claimGift,
     refreshSocial,
   };

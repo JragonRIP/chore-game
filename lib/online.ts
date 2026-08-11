@@ -1,4 +1,4 @@
-import type { GameState } from "@/lib/types";
+import type { GameState, VaultChest } from "@/lib/types";
 import {
   getSupabase,
   makeFriendCode,
@@ -25,15 +25,30 @@ export type FriendEntry = {
   incoming: boolean;
 };
 
+export type GiftType = "gold" | "gear" | "pet" | "chest";
+
 export type GiftRow = {
   id: string;
   from_id: string;
   to_id: string;
-  gold: number;
+  gift_type: GiftType;
+  gold: number | null;
+  gear_id: string | null;
+  pet_id: string | null;
+  chest_json: VaultChest | null;
+  dupe_gold: number;
   claimed: boolean;
   created_at: string;
   from_name?: string;
 };
+
+export type ClaimGiftResult =
+  | { kind: "gold"; gold: number }
+  | { kind: "gear"; gearId: string }
+  | { kind: "gear-dupe"; gold: number; gearId: string }
+  | { kind: "pet"; petId: string }
+  | { kind: "pet-dupe"; gold: number; petId: string }
+  | { kind: "chest"; chest: VaultChest };
 
 function sb() {
   const c = getSupabase();
@@ -213,7 +228,9 @@ export async function listIncomingGifts(): Promise<GiftRow[]> {
   const c = sb();
   const { data, error } = await c
     .from("gifts")
-    .select("id, from_id, to_id, gold, claimed, created_at")
+    .select(
+      "id, from_id, to_id, gift_type, gold, gear_id, pet_id, chest_json, dupe_gold, claimed, created_at",
+    )
     .eq("to_id", uid)
     .eq("claimed", false)
     .order("created_at", { ascending: false });
@@ -231,7 +248,17 @@ export async function listIncomingGifts(): Promise<GiftRow[]> {
   );
 
   return rows.map((g) => ({
-    ...g,
+    id: g.id,
+    from_id: g.from_id,
+    to_id: g.to_id,
+    gift_type: (g.gift_type ?? "gold") as GiftType,
+    gold: g.gold,
+    gear_id: g.gear_id ?? null,
+    pet_id: g.pet_id ?? null,
+    chest_json: (g.chest_json as VaultChest | null) ?? null,
+    dupe_gold: g.dupe_gold ?? 25,
+    claimed: g.claimed,
+    created_at: g.created_at,
     from_name: names[g.from_id],
   }));
 }
@@ -247,10 +274,78 @@ export async function sendGoldGift(
   if (error) throw new Error(error.message);
 }
 
-export async function claimGoldGift(giftId: string): Promise<number> {
+export async function sendGearGift(
+  toPlayerId: string,
+  gearId: string,
+  dupeGold: number,
+): Promise<void> {
+  const { error } = await sb().rpc("send_gear_gift", {
+    p_to_player_id: toPlayerId,
+    p_gear_id: gearId,
+    p_dupe_gold: dupeGold,
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function sendPetGift(
+  toPlayerId: string,
+  petId: string,
+  dupeGold: number,
+): Promise<void> {
+  const { error } = await sb().rpc("send_pet_gift", {
+    p_to_player_id: toPlayerId,
+    p_pet_id: petId,
+    p_dupe_gold: dupeGold,
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function sendChestGift(
+  toPlayerId: string,
+  chestId: string,
+): Promise<void> {
+  const { error } = await sb().rpc("send_chest_gift", {
+    p_to_player_id: toPlayerId,
+    p_chest_id: chestId,
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function claimGift(giftId: string): Promise<ClaimGiftResult> {
   const { data, error } = await sb().rpc("claim_gift", {
     p_gift_id: giftId,
   });
   if (error) throw new Error(error.message);
-  return Number(data ?? 0);
+  const raw = data as Record<string, unknown> | null;
+  if (!raw || typeof raw !== "object") {
+    throw new Error("Unexpected claim response.");
+  }
+  const kind = String(raw.kind ?? "");
+  if (kind === "gold") {
+    return { kind: "gold", gold: Number(raw.gold ?? 0) };
+  }
+  if (kind === "gear") {
+    return { kind: "gear", gearId: String(raw.gearId ?? "") };
+  }
+  if (kind === "gear-dupe") {
+    return {
+      kind: "gear-dupe",
+      gold: Number(raw.gold ?? 0),
+      gearId: String(raw.gearId ?? ""),
+    };
+  }
+  if (kind === "pet") {
+    return { kind: "pet", petId: String(raw.petId ?? "") };
+  }
+  if (kind === "pet-dupe") {
+    return {
+      kind: "pet-dupe",
+      gold: Number(raw.gold ?? 0),
+      petId: String(raw.petId ?? ""),
+    };
+  }
+  if (kind === "chest") {
+    return { kind: "chest", chest: raw.chest as VaultChest };
+  }
+  throw new Error("Unknown gift claim result.");
 }

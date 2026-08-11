@@ -1,4 +1,4 @@
-# Online setup (accounts, friends, gold gifts)
+# Online setup (accounts, friends, gifts)
 
 The game works offline without this. Follow these steps only when you want cloud saves + friends.
 
@@ -21,8 +21,12 @@ Restart `npm run dev` after saving.
 
 ## 3. Run the database schema
 
+**New project:** paste and run everything from `supabase/schema.sql`.
+
+**Existing project** (already ran an older schema): run `supabase/migration_gifts_v2.sql` instead — it adds gear/pet/chest gifts and updates claim.
+
 1. In Supabase, open **SQL Editor → New query**.
-2. Paste everything from `supabase/schema.sql`.
+2. Paste the file contents.
 3. Click **Run**.
 
 ## 4. Turn off email confirmation
@@ -35,19 +39,24 @@ Kids sign in with **username + PIN** (we use a synthetic email under the hood).
 
 ## 5. Test with 2 accounts
 
-1. Open the app → tap the **Friends** icon in the header.
+1. Open the app → tap the hero portrait → **Friends**.
 2. **Create account** (username + 4–8 digit PIN). Your current progress uploads automatically.
 3. Copy your **friend code**.
 4. On another browser/device (or incognito), create a second account.
 5. Add each other with friend codes → **Accept**.
-6. Send a **gold gift** → other account **Claims** it.
+6. Gift **gold / gear / pet / chest** → other account **Claims** it.
+
+## Gift rules
+
+- Gold: 1–500, deducted from the sender.
+- Gear / pet: removed from your inventory (unequipped if worn). Dupes on claim convert to gold.
+- Chest: unopened vault chests only — moves to the friend’s vault.
 
 ## Notes
 
 - First login with an empty cloud save **keeps** your local progress.
-- Signing into an account that already has cloud progress **loads the cloud save** (so the same kid can continue on another device).
-- Gifts are 1–500 gold and only work between accepted friends.
-- Battles are not built yet — friends + gifts are the first online slice.
+- Signing into an account that already has cloud progress **loads the cloud save**.
+- Gifts only work between accepted friends.
 
 ## Troubleshooting
 
@@ -55,5 +64,6 @@ Kids sign in with **username + PIN** (we use a synthetic email under the hood).
 |---|---|
 | “Online play isn’t set up” | Missing `.env.local` or forgot to restart dev server |
 | Sign up fails / email error | Confirm email must be **disabled** |
-| Tables / RPC missing | Re-run `supabase/schema.sql` |
+| Tables / RPC missing | Re-run `schema.sql` (or `migration_gifts_v2.sql` if upgrading) |
 | Gift “Not enough gold” | Earn/sync gold first; cloud save must match local |
+| Gear/pet/chest gift RPC missing | Run `migration_gifts_v2.sql` |
