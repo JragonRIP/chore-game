@@ -23,6 +23,7 @@ import type {
   PetDef,
   PetId,
   QuestCategory,
+  QuestId,
   Rarity,
   VaultChest,
 } from "./types";
@@ -74,6 +75,7 @@ export function createInitialState(): GameState {
     petsUnlocked: false,
     activeQuests: [],
     completedToday: [],
+    questLastCompleted: {},
     completedDate: todayKey(),
     lootLog: [],
     vaultChests: [],
@@ -125,6 +127,12 @@ export function normalizeState(raw: unknown): GameState {
     completedToday: Array.isArray(r.completedToday)
       ? (r.completedToday as string[])
       : [],
+    questLastCompleted:
+      r.questLastCompleted &&
+      typeof r.questLastCompleted === "object" &&
+      !Array.isArray(r.questLastCompleted)
+        ? (r.questLastCompleted as Record<string, number>)
+        : {},
     completedDate:
       typeof r.completedDate === "string" ? r.completedDate : todayKey(),
     lootLog: Array.isArray(r.lootLog) ? (r.lootLog as string[]) : [],
@@ -393,4 +401,53 @@ export function formatCountdown(ms: number): string {
   const m = Math.floor(totalSec / 60);
   const s = totalSec % 60;
   return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+export function formatLongCountdown(ms: number): string {
+  const totalMin = Math.ceil(ms / 60_000);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h <= 0) return `${m}m`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
+}
+
+export function questMaxPerDay(quest: { maxPerDay?: number }): number {
+  return quest.maxPerDay ?? 1;
+}
+
+export function questCompletionsToday(
+  state: GameState,
+  questId: QuestId,
+): number {
+  return state.completedToday.filter((id) => id === questId).length;
+}
+
+export function questCooldownRemainingMs(
+  state: GameState,
+  quest: { id: QuestId; cooldownHours?: number },
+  now = Date.now(),
+): number {
+  if (!quest.cooldownHours) return 0;
+  const last = state.questLastCompleted[quest.id];
+  if (!last) return 0;
+  return Math.max(0, last + quest.cooldownHours * 3_600_000 - now);
+}
+
+export function isQuestFullyDoneToday(
+  state: GameState,
+  quest: { id: QuestId; maxPerDay?: number },
+): boolean {
+  return questCompletionsToday(state, quest.id) >= questMaxPerDay(quest);
+}
+
+export function canStartQuest(
+  state: GameState,
+  quest: { id: QuestId; maxPerDay?: number; cooldownHours?: number },
+  now = Date.now(),
+): boolean {
+  if (state.activeQuests.some((q) => q.questId === quest.id)) return false;
+  if (isQuestFullyDoneToday(state, quest)) return false;
+  if (questCooldownRemainingMs(state, quest, now) > 0) return false;
+  return true;
 }

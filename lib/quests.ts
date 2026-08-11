@@ -130,6 +130,8 @@ export const QUESTS: Quest[] = [
     coins: 12,
     goal: "Fill the water bowl or place pre-measured food (with a grown-up nearby).",
     icon: "🐾",
+    maxPerDay: 2,
+    cooldownHours: 5,
   },
   {
     id: "pet-patrol",
@@ -198,6 +200,8 @@ export const QUESTS: Quest[] = [
     coins: 8,
     goal: "Brush your teeth, then put the toothbrush and toothpaste away.",
     icon: "🪥",
+    maxPerDay: 2,
+    cooldownHours: 5,
   },
 
   // —— Kitchen / dining / food ——

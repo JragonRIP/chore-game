@@ -33,6 +33,10 @@ export interface Quest {
   coins: number;
   goal: string;
   icon: string;
+  /** How many times this quest can be completed per day. Default 1. */
+  maxPerDay?: number;
+  /** Hours to wait between completions. */
+  cooldownHours?: number;
 }
 
 export interface GearDef {
@@ -117,6 +121,8 @@ export interface GameState {
   petsUnlocked: boolean;
   activeQuests: ActiveQuest[];
   completedToday: QuestId[];
+  /** Last completion timestamp per quest (for cooldowns). */
+  questLastCompleted: Record<string, number>;
   completedDate: string;
   lootLog: GearId[];
   vaultChests: VaultChest[];

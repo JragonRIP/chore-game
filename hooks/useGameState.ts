@@ -6,10 +6,13 @@ import {
   applyFlatRewards,
   applyQuestRewards,
   canCompleteQuest,
+  canStartQuest,
   computeBonuses,
   createInitialState,
+  isQuestFullyDoneToday,
   makeChestId,
   normalizeState,
+  questCooldownRemainingMs,
   rollChestLoot,
   todayKey,
   xpToNextLevel,
@@ -125,12 +128,8 @@ export function useGameState() {
   const startQuest = useCallback((id: QuestId) => {
     setState((s) => {
       if (!s) return s;
-      if (
-        s.completedToday.includes(id) ||
-        s.activeQuests.some((q) => q.questId === id)
-      ) {
-        return s;
-      }
+      const quest = QUESTS.find((q) => q.id === id);
+      if (!quest || !canStartQuest(s, quest)) return s;
       return {
         ...s,
         activeQuests: [
@@ -147,7 +146,9 @@ export function useGameState() {
 
     let ok = false;
     setState((s) => {
-      if (!s || s.completedToday.includes(id)) return s;
+      if (!s) return s;
+      if (isQuestFullyDoneToday(s, quest)) return s;
+      if (questCooldownRemainingMs(s, quest) > 0) return s;
       const active = s.activeQuests.find((q) => q.questId === id);
       if (!canCompleteQuest(active, quest.minutes)) return s;
       ok = true;
@@ -174,6 +175,10 @@ export function useGameState() {
         petsUnlocked: s.petsUnlocked || unlockingPets,
         activeQuests: s.activeQuests.filter((q) => q.questId !== id),
         completedToday: [...s.completedToday, id],
+        questLastCompleted: {
+          ...s.questLastCompleted,
+          [id]: Date.now(),
+        },
         vaultChests: [...rewarded.chests, ...s.vaultChests],
       };
     });

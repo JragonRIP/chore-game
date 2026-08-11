@@ -1,7 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { GoldCoin } from "@/components/GoldCoin";
+import {
+  formatLongCountdown,
+  isQuestFullyDoneToday,
+  questCompletionsToday,
+  questCooldownRemainingMs,
+  questMaxPerDay,
+} from "@/lib/math";
 import { QUESTS, QUEST_CATEGORIES } from "@/lib/quests";
 import type { GameState, QuestCategory, QuestId } from "@/lib/types";
 
@@ -17,6 +24,12 @@ export function QuestBoard({
   const [category, setCategory] = useState<(typeof QUEST_CATEGORIES)[number]>(
     "All Quests",
   );
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const t = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(t);
+  }, []);
 
   const filtered = useMemo(() => {
     return QUESTS.filter((q) => {
@@ -46,8 +59,13 @@ export function QuestBoard({
 
       <div className="mt-4 flex flex-col gap-3.5">
         {filtered.map((quest, i) => {
-          const done = state.completedToday.includes(quest.id);
+          const max = questMaxPerDay(quest);
+          const doneCount = questCompletionsToday(state, quest.id);
+          const fullyDone = isQuestFullyDoneToday(state, quest);
+          const cooldownMs = questCooldownRemainingMs(state, quest, now);
+          const onCooldown = cooldownMs > 0 && !fullyDone;
           const active = state.activeQuests.some((q) => q.questId === quest.id);
+
           return (
             <article
               key={quest.id}
@@ -56,7 +74,7 @@ export function QuestBoard({
             >
               <div className="relative flex items-center justify-center bg-gradient-to-br from-sky-2 via-white to-teal/10 py-7">
                 <span className="text-5xl drop-shadow-sm">{quest.icon}</span>
-                <div className="absolute right-3 top-3">
+                <div className="absolute right-3 top-3 flex flex-col items-end gap-1">
                   <span
                     className={`chip ${
                       quest.difficulty === "quick"
@@ -68,6 +86,11 @@ export function QuestBoard({
                       ? `Quick · ${quest.minutes}m`
                       : `Epic · ${quest.minutes}m`}
                   </span>
+                  {max > 1 && (
+                    <span className="chip border-ink/10 bg-white/80 text-ink-soft">
+                      {doneCount}/{max} today
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="p-4">
@@ -86,9 +109,16 @@ export function QuestBoard({
                   {quest.goal}
                 </p>
                 <div className="mt-4">
-                  {done ? (
+                  {fullyDone ? (
                     <p className="rounded-xl bg-xp/10 px-3 py-3 text-center text-sm font-semibold text-emerald-700">
-                      Cleared today — returns at midnight
+                      {max > 1
+                        ? `Done ${max}× today — returns at midnight`
+                        : "Cleared today — returns at midnight"}
+                    </p>
+                  ) : onCooldown ? (
+                    <p className="rounded-xl bg-amber-50 px-3 py-3 text-center text-sm font-semibold text-amber-800">
+                      Ready again in {formatLongCountdown(cooldownMs)}
+                      {max > 1 ? ` · ${doneCount}/${max} done` : ""}
                     </p>
                   ) : active ? (
                     <button
@@ -104,7 +134,9 @@ export function QuestBoard({
                       onClick={() => onStart(quest.id)}
                       className="btn btn-primary w-full"
                     >
-                      Start Quest
+                      {doneCount > 0 && max > 1
+                        ? "Start Again"
+                        : "Start Quest"}
                     </button>
                   )}
                 </div>
