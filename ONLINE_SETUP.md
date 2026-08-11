@@ -19,6 +19,12 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
 
 Restart `npm run dev` after saving.
 
+### Deployed site (Vercel / phones)
+
+`.env.local` is only on your computer. The live URL needs the same vars at **build** time.
+
+This repo includes `.env.production` with the public Supabase URL + anon key so phone/deploys work after a push. If you use Vercel, you can also set them under **Project → Settings → Environment Variables**, then **Redeploy**.
+
 ## 3. Run the database schema
 
 **New project:** paste and run everything from `supabase/schema.sql`.
@@ -62,7 +68,8 @@ Kids sign in with **username + PIN** (we use a synthetic email under the hood).
 
 | Issue | Fix |
 |---|---|
-| “Online play isn’t set up” | Missing `.env.local` or forgot to restart dev server |
+| “Online play isn’t set up” | Missing `.env.local` (local) or `.env.production` / Vercel env (deployed phone URL); redeploy after adding |
+| Works on PC, not on phone | Phone is on the live site without env baked in — push `.env.production` or set Vercel env + redeploy |
 | Sign up fails / email error | Confirm email must be **disabled** |
 | Tables / RPC missing | Re-run `schema.sql` (or `migration_gifts_v2.sql` if upgrading) |
 | Gift “Not enough gold” | Earn/sync gold first; cloud save must match local |
