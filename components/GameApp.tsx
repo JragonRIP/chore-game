@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { ActiveQuestSheet } from "@/components/ActiveQuestSheet";
 import { Armory } from "@/components/Armory";
 import { BottomNav } from "@/components/BottomNav";
 import { HeroCreate } from "@/components/HeroCreate";
@@ -14,13 +16,15 @@ import { QuestBoard } from "@/components/QuestBoard";
 import { StoreScreen } from "@/components/StoreScreen";
 import { TreasureVault } from "@/components/TreasureVault";
 import { useGameState } from "@/hooks/useGameState";
+import type { QuestId } from "@/lib/types";
 
 export function GameApp() {
   const g = useGameState();
+  const [openQuestId, setOpenQuestId] = useState<QuestId | null>(null);
 
   if (!g.state) {
     return (
-      <div className="realm-bg flex min-h-dvh items-center justify-center">
+      <div className="realm-bg flex h-dvh items-center justify-center">
         <p className="font-display text-lg text-teal-deep">Loading realm…</p>
       </div>
     );
@@ -34,46 +38,66 @@ export function GameApp() {
     return <HeroCreate onCreate={g.createHero} />;
   }
 
+  const handleStart = (id: QuestId) => {
+    g.startQuest(id);
+    setOpenQuestId(id);
+  };
+
+  const handleComplete = (id: QuestId) => {
+    setOpenQuestId(null);
+    g.completeQuest(id);
+  };
+
   return (
-    <div className="realm-bg relative flex min-h-dvh flex-col text-ink">
-      <div className="relative flex min-h-dvh flex-1 flex-col">
-        <PlayerHeader
-          state={g.state}
-          xpNeeded={g.xpNeeded}
-          xpPctBonus={g.bonuses.xpPct}
-          onLevelTap={g.onLevelBadgeTap}
+    <div className="realm-bg relative flex h-dvh flex-col overflow-hidden text-ink">
+      <PlayerHeader
+        state={g.state}
+        xpNeeded={g.xpNeeded}
+        xpPctBonus={g.bonuses.xpPct}
+        onLevelTap={g.onLevelBadgeTap}
+      />
+
+      <main className="min-h-0 flex-1 overflow-y-auto">
+        {g.tab === "quest" && (
+          <QuestBoard
+            state={g.state}
+            onStart={handleStart}
+            onOpenActive={setOpenQuestId}
+          />
+        )}
+        {g.tab === "vault" && (
+          <TreasureVault
+            state={g.state}
+            onComplete={handleComplete}
+            onOpenActive={setOpenQuestId}
+          />
+        )}
+        {g.tab === "armory" && (
+          <Armory
+            state={g.state}
+            activeSetId={g.bonuses.activeSetId}
+            onEquip={g.equipGear}
+            onUnequip={g.unequipSlot}
+          />
+        )}
+        {g.tab === "store" && (
+          <StoreScreen
+            state={g.state}
+            onBuyChest={g.buyChest}
+            onBuyGear={g.buyGear}
+          />
+        )}
+      </main>
+
+      <BottomNav tab={g.tab} onChange={g.setTab} />
+
+      {openQuestId && (
+        <ActiveQuestSheet
+          questId={openQuestId}
+          onClose={() => setOpenQuestId(null)}
+          onComplete={handleComplete}
         />
-
-        <main className="flex-1 overflow-y-auto">
-          {g.tab === "quest" && (
-            <QuestBoard
-              state={g.state}
-              onStart={g.startQuest}
-              onComplete={g.completeQuest}
-            />
-          )}
-          {g.tab === "vault" && (
-            <TreasureVault state={g.state} onComplete={g.completeQuest} />
-          )}
-          {g.tab === "armory" && (
-            <Armory
-              state={g.state}
-              activeSetId={g.bonuses.activeSetId}
-              onEquip={g.equipGear}
-              onUnequip={g.unequipSlot}
-            />
-          )}
-          {g.tab === "store" && (
-            <StoreScreen
-              state={g.state}
-              onBuyChest={g.buyChest}
-              onBuyGear={g.buyGear}
-            />
-          )}
-        </main>
-
-        <BottomNav tab={g.tab} onChange={g.setTab} />
-      </div>
+      )}
 
       {g.celebration && (
         <CelebrationModal

@@ -225,6 +225,21 @@ body {
   animation: rise-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+@keyframes sheet-up {
+  from {
+    opacity: 0.6;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.sheet-up {
+  animation: sheet-up 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 @keyframes confetti-fall {
   0% {
     transform: translateY(-8vh) rotate(0deg);

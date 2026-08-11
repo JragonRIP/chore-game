@@ -18,7 +18,7 @@ export function PlayerHeader({
   const pct = Math.min(100, Math.round((state.xp / xpNeeded) * 100));
 
   return (
-    <header className="glass-bar sticky top-0 z-30 border-b px-3 py-2.5">
+    <header className="glass-bar z-30 shrink-0 border-b px-3 py-2.5">
       <div className="mx-auto flex max-w-lg items-center gap-3">
         <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-sky-2 to-white shadow-sm ring-1 ring-ink/5">
           <HeroSprite

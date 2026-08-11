@@ -12,9 +12,11 @@ type VaultFilter = "Active Quests" | "Done Today" | "Loot Unlocked";
 export function TreasureVault({
   state,
   onComplete,
+  onOpenActive,
 }: {
   state: GameState;
   onComplete: (id: QuestId) => void;
+  onOpenActive: (id: QuestId) => void;
 }) {
   const [filter, setFilter] = useState<VaultFilter>("Active Quests");
   const [query, setQuery] = useState("");
@@ -101,8 +103,15 @@ export function TreasureVault({
                   </p>
                   <button
                     type="button"
+                    onClick={() => onOpenActive(q.id)}
+                    className="btn btn-ghost mt-3 min-h-10 w-full text-sm"
+                  >
+                    Open Card
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => onComplete(q.id)}
-                    className="btn btn-secondary mt-3 min-h-10 w-full text-sm"
+                    className="btn btn-secondary mt-2 min-h-10 w-full text-sm"
                   >
                     Mark Complete
                   </button>

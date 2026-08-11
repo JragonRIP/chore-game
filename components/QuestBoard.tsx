@@ -7,11 +7,11 @@ import type { GameState, QuestCategory, QuestId } from "@/lib/types";
 export function QuestBoard({
   state,
   onStart,
-  onComplete,
+  onOpenActive,
 }: {
   state: GameState;
   onStart: (id: QuestId) => void;
-  onComplete: (id: QuestId) => void;
+  onOpenActive: (id: QuestId) => void;
 }) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<(typeof QUEST_CATEGORIES)[number]>(
@@ -104,10 +104,10 @@ export function QuestBoard({
                   ) : active ? (
                     <button
                       type="button"
-                      onClick={() => onComplete(quest.id)}
+                      onClick={() => onOpenActive(quest.id)}
                       className="btn btn-secondary w-full"
                     >
-                      Complete Quest
+                      Open Quest Card
                     </button>
                   ) : (
                     <button

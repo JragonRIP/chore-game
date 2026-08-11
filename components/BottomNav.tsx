@@ -17,7 +17,7 @@ export function BottomNav({
   onChange: (t: TabId) => void;
 }) {
   return (
-    <nav className="glass-bar sticky bottom-0 z-30 border-t pb-[max(0.4rem,env(safe-area-inset-bottom))] pt-1.5">
+    <nav className="glass-bar z-30 shrink-0 border-t pb-[max(0.4rem,env(safe-area-inset-bottom))] pt-1.5">
       <div className="mx-auto grid max-w-lg grid-cols-4 gap-1 px-2">
         {TABS.map((t) => {
           const active = tab === t.id;
