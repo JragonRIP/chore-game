@@ -205,6 +205,16 @@ export function useGameState() {
     setTab("pets");
   }, []);
 
+  const replaceState = useCallback((next: GameState) => {
+    setState(normalizeState(next));
+  }, []);
+
+  const patchGold = useCallback((delta: number) => {
+    setState((s) =>
+      s ? { ...s, gold: Math.max(0, s.gold + delta) } : s,
+    );
+  }, []);
+
   const beginOpenChest = useCallback((chest: VaultChest) => {
     setOpeningChest(chest);
     setLootResult(null);
@@ -479,5 +489,7 @@ export function useGameState() {
     resetProgressSoft,
     petsUnlockOpen,
     dismissPetsUnlock,
+    replaceState,
+    patchGold,
   };
 }

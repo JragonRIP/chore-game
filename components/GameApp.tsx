@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ActiveQuestSheet } from "@/components/ActiveQuestSheet";
 import { Armory } from "@/components/Armory";
 import { BottomNav } from "@/components/BottomNav";
+import { FriendsPanel } from "@/components/FriendsPanel";
 import { HeroCreate } from "@/components/HeroCreate";
 import { IntroStory } from "@/components/IntroStory";
 import {
@@ -19,11 +20,24 @@ import { QuestBoard } from "@/components/QuestBoard";
 import { StoreScreen } from "@/components/StoreScreen";
 import { TreasureVault } from "@/components/TreasureVault";
 import { useGameState } from "@/hooks/useGameState";
+import { useOnline } from "@/hooks/useOnline";
 import type { QuestId } from "@/lib/types";
 
 export function GameApp() {
   const g = useGameState();
   const [openQuestId, setOpenQuestId] = useState<QuestId | null>(null);
+  const [friendsOpen, setFriendsOpen] = useState(false);
+
+  const online = useOnline({
+    state: g.state,
+    replaceState: g.replaceState,
+    patchGold: g.patchGold,
+  });
+
+  const friendsBadge = useMemo(() => {
+    const pending = online.friends.filter((f) => f.incoming).length;
+    return pending + online.gifts.length;
+  }, [online.friends, online.gifts]);
 
   if (!g.state) {
     return (
@@ -63,6 +77,9 @@ export function GameApp() {
         xpPctBonus={g.bonuses.xpPct}
         coinBonus={g.bonuses.coins}
         onLevelTap={g.onLevelBadgeTap}
+        onFriends={() => setFriendsOpen(true)}
+        friendsBadge={friendsBadge}
+        onlineActive={Boolean(online.player)}
       />
 
       <main className="min-h-0 flex-1 overflow-y-auto">
@@ -158,6 +175,13 @@ export function GameApp() {
           onUpdateQuest={g.parentUpdateQuest}
         />
       )}
+
+      <FriendsPanel
+        open={friendsOpen}
+        onClose={() => setFriendsOpen(false)}
+        state={g.state}
+        online={online}
+      />
     </div>
   );
 }

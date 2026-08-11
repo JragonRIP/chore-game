@@ -1,0 +1,256 @@
+import type { GameState } from "@/lib/types";
+import {
+  getSupabase,
+  makeFriendCode,
+  usernameToEmail,
+} from "@/lib/supabase";
+import { normalizeState } from "@/lib/math";
+
+export type PlayerRow = {
+  id: string;
+  username: string;
+  display_name: string;
+  friend_code: string;
+  save_json: unknown;
+  updated_at: string;
+};
+
+export type FriendEntry = {
+  friendshipId: string;
+  playerId: string;
+  username: string;
+  displayName: string;
+  friendCode: string;
+  status: "pending" | "accepted";
+  incoming: boolean;
+};
+
+export type GiftRow = {
+  id: string;
+  from_id: string;
+  to_id: string;
+  gold: number;
+  claimed: boolean;
+  created_at: string;
+  from_name?: string;
+};
+
+function sb() {
+  const c = getSupabase();
+  if (!c) throw new Error("Online play is not configured yet.");
+  return c;
+}
+
+export async function getSessionUserId(): Promise<string | null> {
+  const c = getSupabase();
+  if (!c) return null;
+  const { data } = await c.auth.getSession();
+  return data.session?.user.id ?? null;
+}
+
+export async function signUpAccount(input: {
+  username: string;
+  pin: string;
+  displayName: string;
+}): Promise<{ player: PlayerRow }> {
+  const username = input.username.trim().toLowerCase().replace(/[^a-z0-9_]/g, "");
+  if (username.length < 3) throw new Error("Username needs at least 3 letters.");
+  if (!/^\d{4,8}$/.test(input.pin)) {
+    throw new Error("PIN must be 4–8 digits.");
+  }
+  const email = usernameToEmail(username);
+  const c = sb();
+  const { data, error } = await c.auth.signUp({
+    email,
+    password: input.pin,
+  });
+  if (error) throw new Error(error.message);
+  const userId = data.user?.id;
+  if (!userId) throw new Error("Could not create account.");
+
+  let friendCode = makeFriendCode();
+  for (let i = 0; i < 5; i++) {
+    const { data: row, error: insertErr } = await c
+      .from("players")
+      .insert({
+        id: userId,
+        username,
+        display_name: input.displayName.trim() || username,
+        friend_code: friendCode,
+        save_json: {},
+      })
+      .select("*")
+      .single();
+    if (!insertErr && row) return { player: row as PlayerRow };
+    if (insertErr?.code === "23505") {
+      friendCode = makeFriendCode();
+      continue;
+    }
+    throw new Error(insertErr?.message ?? "Could not create player profile.");
+  }
+  throw new Error("Could not assign a friend code. Try again.");
+}
+
+export async function signInAccount(input: {
+  username: string;
+  pin: string;
+}): Promise<void> {
+  const username = input.username.trim().toLowerCase().replace(/[^a-z0-9_]/g, "");
+  const { error } = await sb().auth.signInWithPassword({
+    email: usernameToEmail(username),
+    password: input.pin,
+  });
+  if (error) throw new Error("Wrong username or PIN.");
+}
+
+export async function signOutAccount(): Promise<void> {
+  const c = getSupabase();
+  if (!c) return;
+  await c.auth.signOut();
+}
+
+export async function fetchMyPlayer(): Promise<PlayerRow | null> {
+  const c = getSupabase();
+  if (!c) return null;
+  const uid = await getSessionUserId();
+  if (!uid) return null;
+  const { data, error } = await c
+    .from("players")
+    .select("*")
+    .eq("id", uid)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return (data as PlayerRow) ?? null;
+}
+
+export async function pushCloudSave(state: GameState): Promise<void> {
+  const { error } = await sb().rpc("upsert_save", { p_save: state });
+  if (error) throw new Error(error.message);
+}
+
+export async function pullCloudSave(): Promise<GameState | null> {
+  const player = await fetchMyPlayer();
+  if (!player) return null;
+  const raw = player.save_json;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const obj = raw as Record<string, unknown>;
+  if (!obj.hero && !obj.hasSeenStory && obj.version == null) return null;
+  return normalizeState(raw);
+}
+
+/** First login: keep local progress if cloud is empty. */
+export async function migrateOrLoadCloudSave(
+  local: GameState,
+): Promise<GameState> {
+  const cloud = await pullCloudSave();
+  if (!cloud || (!cloud.hero && !cloud.hasSeenStory)) {
+    await pushCloudSave(local);
+    return local;
+  }
+  return cloud;
+}
+
+export async function listFriends(): Promise<FriendEntry[]> {
+  const uid = await getSessionUserId();
+  if (!uid) return [];
+  const c = sb();
+  const { data, error } = await c
+    .from("friendships")
+    .select("id, status, requester_id, addressee_id")
+    .or(`requester_id.eq.${uid},addressee_id.eq.${uid}`);
+  if (error) throw new Error(error.message);
+
+  const rows = data ?? [];
+  if (rows.length === 0) return [];
+
+  const otherIds = [
+    ...new Set(
+      rows.map((r) =>
+        r.requester_id === uid ? r.addressee_id : r.requester_id,
+      ),
+    ),
+  ];
+  const { data: players, error: pErr } = await c
+    .from("players")
+    .select("id, username, display_name, friend_code")
+    .in("id", otherIds);
+  if (pErr) throw new Error(pErr.message);
+  const byId = Object.fromEntries((players ?? []).map((p) => [p.id, p]));
+
+  return rows.map((row) => {
+    const otherId =
+      row.requester_id === uid ? row.addressee_id : row.requester_id;
+    const other = byId[otherId];
+    return {
+      friendshipId: row.id,
+      playerId: otherId,
+      username: other?.username ?? "?",
+      displayName: other?.display_name ?? "Hero",
+      friendCode: other?.friend_code ?? "",
+      status: row.status as "pending" | "accepted",
+      incoming: row.addressee_id === uid && row.status === "pending",
+    };
+  });
+}
+
+export async function addFriendByCode(friendCode: string): Promise<void> {
+  const { error } = await sb().rpc("request_friend", {
+    p_friend_code: friendCode.trim().toUpperCase(),
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function acceptFriendRequest(friendshipId: string): Promise<void> {
+  const { error } = await sb().rpc("accept_friend", {
+    p_friendship_id: friendshipId,
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function listIncomingGifts(): Promise<GiftRow[]> {
+  const uid = await getSessionUserId();
+  if (!uid) return [];
+  const c = sb();
+  const { data, error } = await c
+    .from("gifts")
+    .select("id, from_id, to_id, gold, claimed, created_at")
+    .eq("to_id", uid)
+    .eq("claimed", false)
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  const rows = data ?? [];
+  if (rows.length === 0) return [];
+
+  const fromIds = [...new Set(rows.map((g) => g.from_id))];
+  const { data: players } = await c
+    .from("players")
+    .select("id, display_name")
+    .in("id", fromIds);
+  const names = Object.fromEntries(
+    (players ?? []).map((p) => [p.id, p.display_name]),
+  );
+
+  return rows.map((g) => ({
+    ...g,
+    from_name: names[g.from_id],
+  }));
+}
+
+export async function sendGoldGift(
+  toPlayerId: string,
+  amount: number,
+): Promise<void> {
+  const { error } = await sb().rpc("send_gold_gift", {
+    p_to_player_id: toPlayerId,
+    p_amount: amount,
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function claimGoldGift(giftId: string): Promise<number> {
+  const { data, error } = await sb().rpc("claim_gift", {
+    p_gift_id: giftId,
+  });
+  if (error) throw new Error(error.message);
+  return Number(data ?? 0);
+}
