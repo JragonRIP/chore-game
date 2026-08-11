@@ -8,7 +8,8 @@ import {
 import {
   ALL_PETS,
   PET_BY_ID,
-  PET_CHEST_CHANCE,
+  PET_CHEST_CHANCE_LEGENDARY,
+  PET_CHEST_CHANCE_NORMAL,
   PET_DUPLICATE_COINS,
   PET_DUPLICATE_XP,
   applyPetXpGain,
@@ -437,8 +438,13 @@ export function rollChestLoot(
   const rarity = rarityPool(chest);
   const petsUnlocked = Boolean(opts?.petsUnlocked);
   const ownedPets = opts?.ownedPets ?? [];
+  const petChance =
+    chest === "legendary"
+      ? PET_CHEST_CHANCE_LEGENDARY
+      : PET_CHEST_CHANCE_NORMAL;
 
-  if (petsUnlocked && Math.random() < PET_CHEST_CHANCE) {
+  // Gear is the default. Pets are an uncommon bonus roll only.
+  if (petsUnlocked && Math.random() < petChance) {
     return rollPetLoot(ownedPets, rarity);
   }
   return rollGearLoot(ownedGear, rarity);

@@ -63,6 +63,7 @@ export function useGameState() {
   const saveReady = useRef(false);
   const dailyChecked = useRef(false);
   const pendingPetsUnlock = useRef(false);
+  const pendingChestLoot = useRef<LootEvent | null>(null);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional hydrate
@@ -216,6 +217,7 @@ export function useGameState() {
   }, []);
 
   const beginOpenChest = useCallback((chest: VaultChest) => {
+    pendingChestLoot.current = null;
     setOpeningChest(chest);
     setLootResult(null);
     setChestPhase("opening");
@@ -223,21 +225,28 @@ export function useGameState() {
 
   const finishOpenChest = useCallback(() => {
     if (!openingChest) return;
+
     setState((s) => {
       if (!s) return s;
-      if (!s.vaultChests.some((c) => c.id === openingChest.id)) return s;
-      const event = rollChestLoot(s.ownedGear, openingChest.type, {
-        petsUnlocked: s.petsUnlocked,
-        ownedPets: s.ownedPets,
-      });
+      const chest = s.vaultChests.find((c) => c.id === openingChest.id);
+      if (!chest) return s;
+
+      // Cache the roll so React Strict Mode updater replays don't re-roll RNG.
+      let event = pendingChestLoot.current;
+      if (!event) {
+        event = rollChestLoot(s.ownedGear, chest.type, {
+          petsUnlocked: s.petsUnlocked,
+          ownedPets: s.ownedPets,
+        });
+        pendingChestLoot.current = event;
+      }
+
       queueMicrotask(() => {
         setLootResult(event);
         setChestPhase("reveal");
       });
 
-      const withoutChest = s.vaultChests.filter(
-        (c) => c.id !== openingChest.id,
-      );
+      const withoutChest = s.vaultChests.filter((c) => c.id !== chest.id);
 
       if (event.kind === "duplicate") {
         return {
@@ -247,11 +256,7 @@ export function useGameState() {
         };
       }
       if (event.kind === "pet-duplicate") {
-        const flat = applyFlatRewards(
-          s,
-          event.xpAwarded,
-          event.coinsAwarded,
-        );
+        const flat = applyFlatRewards(s, event.xpAwarded, event.coinsAwarded);
         return {
           ...s,
           level: flat.level,
@@ -282,6 +287,7 @@ export function useGameState() {
   }, [openingChest]);
 
   const dismissChest = useCallback(() => {
+    pendingChestLoot.current = null;
     setOpeningChest(null);
     setLootResult(null);
     setChestPhase("idle");

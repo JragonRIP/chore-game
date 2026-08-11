@@ -91,8 +91,12 @@ export const PET_DUPLICATE_XP: Record<Rarity, number> = {
   relic: 280,
 };
 
-/** Chance a chest drop is a pet (when unlocked). */
-export const PET_CHEST_CHANCE = 0.22;
+/** Chance a chest drop is a pet (when unlocked). Keep uncommon — gear is the default. */
+export const PET_CHEST_CHANCE_NORMAL = 0.06;
+export const PET_CHEST_CHANCE_LEGENDARY = 0.1;
+
+/** @deprecated use per-chest chances */
+export const PET_CHEST_CHANCE = PET_CHEST_CHANCE_NORMAL;
 
 function makePet(species: PetSpecies, rarity: Rarity): PetDef {
   const base = BASE_BY_RARITY[rarity];
