@@ -35,6 +35,19 @@ const TABS: Array<{ id: TabId; label: string; icon: React.ReactNode }> = [
     ),
   },
   {
+    id: "pets",
+    label: "Pets",
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+        <circle cx="8" cy="9" r="2.2" />
+        <circle cx="16" cy="9" r="2.2" />
+        <circle cx="5.5" cy="14.5" r="2" />
+        <circle cx="18.5" cy="14.5" r="2" />
+        <ellipse cx="12" cy="16.5" rx="3.2" ry="2.6" />
+      </svg>
+    ),
+  },
+  {
     id: "store",
     label: "Store",
     icon: (
@@ -55,7 +68,7 @@ export function BottomNav({
 }) {
   return (
     <nav className="glass-bar z-30 shrink-0 border-t pb-[max(0.4rem,env(safe-area-inset-bottom))] pt-1.5">
-      <div className="mx-auto grid max-w-lg grid-cols-4 gap-1 px-2">
+      <div className="mx-auto grid max-w-lg grid-cols-5 gap-0.5 px-1.5">
         {TABS.map((t) => {
           const active = tab === t.id;
           return (
@@ -63,20 +76,20 @@ export function BottomNav({
               key={t.id}
               type="button"
               onClick={() => onChange(t.id)}
-              className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl transition ${
+              className={`flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-2xl transition ${
                 active
                   ? "bg-teal text-white shadow-md shadow-teal/25"
                   : "text-ink-soft hover:bg-white/50"
               }`}
             >
               <span
-                className={`flex h-8 w-8 items-center justify-center rounded-xl ${
+                className={`flex h-7 w-7 items-center justify-center rounded-xl ${
                   active ? "bg-white/20" : "bg-ink/5"
                 }`}
               >
                 {t.icon}
               </span>
-              <span className="text-[11px] font-semibold">{t.label}</span>
+              <span className="text-[10px] font-semibold">{t.label}</span>
             </button>
           );
         })}

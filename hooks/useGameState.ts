@@ -14,6 +14,7 @@ import {
   todayKey,
   xpToNextLevel,
 } from "@/lib/math";
+import { PET_BY_ID } from "@/lib/pets";
 import { QUESTS } from "@/lib/quests";
 import { loadGame, saveGame } from "@/lib/storage";
 import type {
@@ -21,6 +22,7 @@ import type {
   GameState,
   GearId,
   LootEvent,
+  PetId,
   QuestId,
   ScreenPhase,
   Slot,
@@ -34,6 +36,7 @@ export interface Celebration {
   questName: string;
   levels: number[];
   chestsEarned: number;
+  equippedPetId: PetId | null;
 }
 
 export function useGameState() {
@@ -47,9 +50,11 @@ export function useGameState() {
   );
   const [dailyGift, setDailyGift] = useState<VaultChest | null>(null);
   const [parentOpen, setParentOpen] = useState(false);
+  const [petsUnlockOpen, setPetsUnlockOpen] = useState(false);
   const levelTaps = useRef(0);
   const saveReady = useRef(false);
   const dailyChecked = useRef(false);
+  const pendingPetsUnlock = useRef(false);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional hydrate
@@ -146,7 +151,13 @@ export function useGameState() {
       const active = s.activeQuests.find((q) => q.questId === id);
       if (!canCompleteQuest(active, quest.minutes)) return s;
       ok = true;
-      const rewarded = applyQuestRewards(s, quest.xp, quest.coins);
+      const unlockingPets = !s.petsUnlocked && quest.category === "Pets";
+      const rewarded = applyQuestRewards(
+        s,
+        quest.xp,
+        quest.coins,
+        quest.category,
+      );
       queueMicrotask(() => {
         setCelebration({
           xp: rewarded.gainedXp,
@@ -154,16 +165,32 @@ export function useGameState() {
           questName: quest.name,
           levels: rewarded.levelsGained,
           chestsEarned: rewarded.chests.length,
+          equippedPetId: s.equippedPet,
         });
+        if (unlockingPets) pendingPetsUnlock.current = true;
       });
       return {
         ...rewarded.state,
+        petsUnlocked: s.petsUnlocked || unlockingPets,
         activeQuests: s.activeQuests.filter((q) => q.questId !== id),
         completedToday: [...s.completedToday, id],
         vaultChests: [...rewarded.chests, ...s.vaultChests],
       };
     });
     return ok;
+  }, []);
+
+  const dismissCelebration = useCallback(() => {
+    setCelebration(null);
+    if (pendingPetsUnlock.current) {
+      pendingPetsUnlock.current = false;
+      setPetsUnlockOpen(true);
+    }
+  }, []);
+
+  const dismissPetsUnlock = useCallback(() => {
+    setPetsUnlockOpen(false);
+    setTab("pets");
   }, []);
 
   const beginOpenChest = useCallback((chest: VaultChest) => {
@@ -177,23 +204,52 @@ export function useGameState() {
     setState((s) => {
       if (!s) return s;
       if (!s.vaultChests.some((c) => c.id === openingChest.id)) return s;
-      const event = rollChestLoot(s.ownedGear, openingChest.type);
+      const event = rollChestLoot(s.ownedGear, openingChest.type, {
+        petsUnlocked: s.petsUnlocked,
+        ownedPets: s.ownedPets,
+      });
       queueMicrotask(() => {
         setLootResult(event);
         setChestPhase("reveal");
       });
+
+      const withoutChest = s.vaultChests.filter(
+        (c) => c.id !== openingChest.id,
+      );
+
       if (event.kind === "duplicate") {
         return {
           ...s,
-          gold: s.gold + (event.coinsAwarded ?? 0),
-          vaultChests: s.vaultChests.filter((c) => c.id !== openingChest.id),
+          gold: s.gold + event.coinsAwarded,
+          vaultChests: withoutChest,
+        };
+      }
+      if (event.kind === "pet-duplicate") {
+        const flat = applyFlatRewards(
+          s,
+          event.xpAwarded,
+          event.coinsAwarded,
+        );
+        return {
+          ...s,
+          level: flat.level,
+          xp: flat.xp,
+          gold: flat.gold,
+          vaultChests: [...flat.chests, ...withoutChest],
+        };
+      }
+      if (event.kind === "pet") {
+        return {
+          ...s,
+          ownedPets: [...s.ownedPets, event.petId],
+          vaultChests: withoutChest,
         };
       }
       return {
         ...s,
         ownedGear: [...s.ownedGear, event.gearId],
         lootLog: [event.gearId, ...s.lootLog].slice(0, 40),
-        vaultChests: s.vaultChests.filter((c) => c.id !== openingChest.id),
+        vaultChests: withoutChest,
       };
     });
   }, [openingChest]);
@@ -238,6 +294,21 @@ export function useGameState() {
     });
   }, []);
 
+  const buyPet = useCallback((petId: PetId) => {
+    const pet = PET_BY_ID[petId];
+    if (!pet?.storePrice) return;
+    setState((s) => {
+      if (!s || !s.petsUnlocked) return s;
+      if (s.ownedPets.includes(petId)) return s;
+      if (s.gold < pet.storePrice!) return s;
+      return {
+        ...s,
+        gold: s.gold - pet.storePrice!,
+        ownedPets: [...s.ownedPets, petId],
+      };
+    });
+  }, []);
+
   const equipGear = useCallback((gearId: GearId) => {
     const gear = GEAR_BY_ID[gearId];
     if (!gear) return;
@@ -254,6 +325,17 @@ export function useGameState() {
     setState((s) =>
       s ? { ...s, equipped: { ...s.equipped, [slot]: null } } : s,
     );
+  }, []);
+
+  const equipPet = useCallback((petId: PetId) => {
+    setState((s) => {
+      if (!s || !s.petsUnlocked || !s.ownedPets.includes(petId)) return s;
+      return { ...s, equippedPet: petId };
+    });
+  }, []);
+
+  const unequipPet = useCallback(() => {
+    setState((s) => (s ? { ...s, equippedPet: null } : s));
   }, []);
 
   const parentGrant = useCallback((xpAmount: number, goldAmount: number) => {
@@ -291,6 +373,8 @@ export function useGameState() {
     setChestPhase("idle");
     setDailyGift(null);
     setParentOpen(false);
+    setPetsUnlockOpen(false);
+    pendingPetsUnlock.current = false;
     dailyChecked.current = false;
     saveGame(fresh);
   }, []);
@@ -305,7 +389,7 @@ export function useGameState() {
     bonuses,
     xpNeeded,
     celebration,
-    setCelebration,
+    dismissCelebration,
     openingChest,
     lootResult,
     chestPhase,
@@ -320,12 +404,17 @@ export function useGameState() {
     completeQuest,
     buyChest,
     buyGear,
+    buyPet,
     equipGear,
     unequipSlot,
+    equipPet,
+    unequipPet,
     parentGrant,
     parentOpen,
     setParentOpen,
     onLevelBadgeTap,
     resetProgressSoft,
+    petsUnlockOpen,
+    dismissPetsUnlock,
   };
 }

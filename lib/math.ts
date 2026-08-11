@@ -5,6 +5,14 @@ import {
   GEAR_SETS,
   RARITY_ORDER,
 } from "./gear";
+import {
+  ALL_PETS,
+  PET_BY_ID,
+  PET_CHEST_CHANCE,
+  PET_DUPLICATE_COINS,
+  PET_DUPLICATE_XP,
+  computePetQuestExtras,
+} from "./pets";
 import type {
   ActiveQuest,
   EquippedMap,
@@ -12,6 +20,9 @@ import type {
   GearDef,
   GearId,
   LootEvent,
+  PetDef,
+  PetId,
+  QuestCategory,
   Rarity,
   VaultChest,
 } from "./types";
@@ -50,7 +61,7 @@ export function makeChestId(): string {
 
 export function createInitialState(): GameState {
   return {
-    version: 2,
+    version: 3,
     hasSeenStory: false,
     hero: null,
     level: 1,
@@ -58,6 +69,9 @@ export function createInitialState(): GameState {
     gold: 0,
     ownedGear: [],
     equipped: emptyEquipped(),
+    ownedPets: [],
+    equippedPet: null,
+    petsUnlocked: false,
     activeQuests: [],
     completedToday: [],
     completedDate: todayKey(),
@@ -82,6 +96,16 @@ export function normalizeState(raw: unknown): GameState {
         }))
       : [];
 
+  const ownedPets = Array.isArray(r.ownedPets)
+    ? (r.ownedPets as string[]).filter((id) => PET_BY_ID[id])
+    : [];
+  const equippedPetRaw =
+    typeof r.equippedPet === "string" ? r.equippedPet : null;
+  const equippedPet =
+    equippedPetRaw && ownedPets.includes(equippedPetRaw)
+      ? equippedPetRaw
+      : null;
+
   let next: GameState = {
     ...base,
     hasSeenStory: Boolean(r.hasSeenStory),
@@ -94,6 +118,9 @@ export function normalizeState(raw: unknown): GameState {
       ...emptyEquipped(),
       ...((r.equipped as EquippedMap) ?? {}),
     },
+    ownedPets,
+    equippedPet,
+    petsUnlocked: Boolean(r.petsUnlocked) || ownedPets.length > 0,
     activeQuests,
     completedToday: Array.isArray(r.completedToday)
       ? (r.completedToday as string[])
@@ -130,7 +157,15 @@ export function getEquippedGear(state: GameState): GearDef[] {
     .filter(Boolean);
 }
 
-export function computeBonuses(state: GameState): {
+export function getEquippedPet(state: GameState): PetDef | null {
+  if (!state.equippedPet) return null;
+  return PET_BY_ID[state.equippedPet] ?? null;
+}
+
+export function computeBonuses(
+  state: GameState,
+  questCategory?: QuestCategory,
+): {
   xpPct: number;
   coins: number;
   activeSetId: string | null;
@@ -151,6 +186,15 @@ export function computeBonuses(state: GameState): {
       coins += set.bonusCoins;
       break;
     }
+  }
+
+  const pet = getEquippedPet(state);
+  if (pet) {
+    xpPct += pet.xpBonusPct;
+    coins += pet.coinBonus;
+    const extras = computePetQuestExtras(pet, questCategory);
+    xpPct += extras.xpPct;
+    coins += extras.coins;
   }
 
   return { xpPct, coins, activeSetId };
@@ -179,6 +223,7 @@ export function applyQuestRewards(
   state: GameState,
   baseXp: number,
   baseCoins: number,
+  questCategory?: QuestCategory,
 ): {
   state: GameState;
   gainedXp: number;
@@ -186,7 +231,7 @@ export function applyQuestRewards(
   levelsGained: number[];
   chests: VaultChest[];
 } {
-  const bonuses = computeBonuses(state);
+  const bonuses = computeBonuses(state, questCategory);
   const gainedXp = Math.max(
     1,
     Math.round(baseXp * (1 + bonuses.xpPct / 100)),
@@ -289,11 +334,7 @@ function rarityPool(chest: "normal" | "legendary"): Rarity {
   ]).rarity;
 }
 
-export function rollChestLoot(
-  owned: GearId[],
-  chest: "normal" | "legendary",
-): LootEvent {
-  const rarity = rarityPool(chest);
+function rollGearLoot(owned: GearId[], rarity: Rarity): LootEvent {
   const candidates = ALL_GEAR.filter((g) => g.rarity === rarity);
   const pool = candidates.length
     ? candidates
@@ -308,6 +349,39 @@ export function rollChestLoot(
     };
   }
   return { kind: "gear", gearId: gear.id };
+}
+
+function rollPetLoot(ownedPets: PetId[], rarity: Rarity): LootEvent {
+  const candidates = ALL_PETS.filter((p) => p.rarity === rarity);
+  const pool = candidates.length
+    ? candidates
+    : ALL_PETS.filter((p) => p.rarity === "forged");
+  const pet = pool[Math.floor(Math.random() * pool.length)]!;
+
+  if (ownedPets.includes(pet.id)) {
+    return {
+      kind: "pet-duplicate",
+      petId: pet.id,
+      coinsAwarded: PET_DUPLICATE_COINS[pet.rarity],
+      xpAwarded: PET_DUPLICATE_XP[pet.rarity],
+    };
+  }
+  return { kind: "pet", petId: pet.id };
+}
+
+export function rollChestLoot(
+  ownedGear: GearId[],
+  chest: "normal" | "legendary",
+  opts?: { petsUnlocked?: boolean; ownedPets?: PetId[] },
+): LootEvent {
+  const rarity = rarityPool(chest);
+  const petsUnlocked = Boolean(opts?.petsUnlocked);
+  const ownedPets = opts?.ownedPets ?? [];
+
+  if (petsUnlocked && Math.random() < PET_CHEST_CHANCE) {
+    return rollPetLoot(ownedPets, rarity);
+  }
+  return rollGearLoot(ownedGear, rarity);
 }
 
 export function rarityRank(r: Rarity): number {

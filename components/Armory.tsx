@@ -10,7 +10,9 @@ import {
   getSetPieces,
 } from "@/lib/gear";
 import { HeroSprite } from "@/components/HeroSprite";
+import { PetIcon } from "@/components/PetIcon";
 import { GearIcon, RarityBadge } from "@/components/PixelGearIcon";
+import { PET_BY_ID } from "@/lib/pets";
 import type { GameState, GearId, Slot } from "@/lib/types";
 
 const LEFT_SLOTS: Slot[] = ["helmet", "chestplate", "leggings"];
@@ -43,16 +45,25 @@ export function Armory({
     [state.ownedGear, slotFilter],
   );
 
+  const equippedPet = state.equippedPet
+    ? PET_BY_ID[state.equippedPet]
+    : null;
+
   const slotButton = (slot: Slot | "pet") => {
     if (slot === "pet") {
       return (
         <div
           key="pet"
-          className="surface flex h-[4.5rem] w-[4.5rem] flex-col items-center justify-center gap-1 opacity-60"
+          className="surface flex h-[4.5rem] w-[4.5rem] flex-col items-center justify-center gap-1"
+          title="Equip pets on the Pets tab"
         >
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-dashed border-ink/25 text-xs text-ink/40">
-            ?
-          </div>
+          {equippedPet ? (
+            <PetIcon pet={equippedPet} size={40} />
+          ) : (
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-dashed border-ink/25 text-xs text-ink/40">
+              {state.petsUnlocked ? "—" : "?"}
+            </div>
+          )}
           <span className="text-[9px] font-semibold text-ink-soft">Pet</span>
         </div>
       );
@@ -90,13 +101,18 @@ export function Armory({
       <div className="surface-strong mt-4 flex items-center justify-between gap-2 px-2 py-4">
         <div className="flex flex-col gap-2">{LEFT_SLOTS.map(slotButton)}</div>
         <div className="flex flex-1 flex-col items-center">
-          <div className="flex h-44 w-44 items-center justify-center rounded-[2rem] bg-gradient-to-br from-sky-2 to-white ring-1 ring-ink/5 sm:h-52 sm:w-52">
+          <div className="relative flex h-44 w-44 items-center justify-center rounded-[2rem] bg-gradient-to-br from-sky-2 to-white ring-1 ring-ink/5 sm:h-52 sm:w-52">
             <HeroSprite
               avatar={hero.avatar}
               equipped={state.equipped}
               size={180}
               showGearBadges={false}
             />
+            {equippedPet && (
+              <div className="absolute bottom-2 right-2">
+                <PetIcon pet={equippedPet} size={44} />
+              </div>
+            )}
           </div>
           <p className="mt-2 font-display text-base text-ink">{hero.name}</p>
           <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5">

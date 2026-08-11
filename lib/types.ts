@@ -9,7 +9,7 @@ export type QuestCategory =
   | "Cleaning"
   | "Outdoor";
 export type Difficulty = "quick" | "epic";
-export type TabId = "quest" | "vault" | "armory" | "store";
+export type TabId = "quest" | "vault" | "armory" | "pets" | "store";
 export type AvatarId =
   | "knight"
   | "wizard"
@@ -17,9 +17,11 @@ export type AvatarId =
   | "dragon-rider"
   | "berserker";
 export type ChestType = "normal" | "legendary";
+export type PetSpecies = "lizard" | "wolf" | "lion" | "dragon";
 
 export type QuestId = string;
 export type GearId = string;
+export type PetId = string;
 
 export interface Quest {
   id: QuestId;
@@ -53,6 +55,18 @@ export interface GearSetDef {
   hue: number;
 }
 
+export interface PetDef {
+  id: PetId;
+  species: PetSpecies;
+  name: string;
+  rarity: Rarity;
+  xpBonusPct: number;
+  coinBonus: number;
+  hue: number;
+  traitLabel: string;
+  storePrice?: number;
+}
+
 export interface EquippedMap {
   helmet: GearId | null;
   chestplate: GearId | null;
@@ -66,11 +80,16 @@ export interface HeroProfile {
   avatar: AvatarId;
 }
 
-export interface LootEvent {
-  kind: "gear" | "duplicate";
-  gearId: GearId;
-  coinsAwarded?: number;
-}
+export type LootEvent =
+  | { kind: "gear"; gearId: GearId }
+  | { kind: "duplicate"; gearId: GearId; coinsAwarded: number }
+  | { kind: "pet"; petId: PetId }
+  | {
+      kind: "pet-duplicate";
+      petId: PetId;
+      coinsAwarded: number;
+      xpAwarded: number;
+    };
 
 export interface ActiveQuest {
   questId: QuestId;
@@ -85,7 +104,7 @@ export interface VaultChest {
 }
 
 export interface GameState {
-  version: 2;
+  version: 3;
   hasSeenStory: boolean;
   hero: HeroProfile | null;
   level: number;
@@ -93,6 +112,9 @@ export interface GameState {
   gold: number;
   ownedGear: GearId[];
   equipped: EquippedMap;
+  ownedPets: PetId[];
+  equippedPet: PetId | null;
+  petsUnlocked: boolean;
   activeQuests: ActiveQuest[];
   completedToday: QuestId[];
   completedDate: string;

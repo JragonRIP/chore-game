@@ -95,7 +95,10 @@ export function ChestOpenModal({
   onFinishOpen: () => void;
   onDismiss: () => void;
 }) {
-  const gear = loot ? GEAR_BY_ID[loot.gearId] : null;
+  const gear =
+    loot && (loot.kind === "gear" || loot.kind === "duplicate")
+      ? GEAR_BY_ID[loot.gearId]
+      : null;
   const legendary = chest.type === "legendary";
 
   useEffect(() => {
@@ -130,7 +133,7 @@ export function ChestOpenModal({
 
         {phase === "reveal" && loot && (
           <>
-            {loot.kind === "duplicate" ? (
+            {loot.kind === "duplicate" && (
               <>
                 <p className="text-xs font-bold uppercase tracking-wide text-amber-700">
                   Duplicate
@@ -143,21 +146,41 @@ export function ChestOpenModal({
                   <GoldCoin size={28} />+{loot.coinsAwarded}
                 </div>
               </>
-            ) : (
+            )}
+            {loot.kind === "gear" && gear && (
               <>
                 <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">
                   New Gear!
                 </p>
-                {gear && (
-                  <div className="mt-4 flex flex-col items-center gap-2 loot-pop">
-                    <GearIcon gear={gear} size={88} />
-                    <p className="font-display text-lg text-ink">{gear.name}</p>
-                    <RarityBadge rarity={gear.rarity} />
-                    <p className="text-sm text-ink-soft">
-                      +{gear.xpBonusPct}% XP · +{gear.coinBonus} gold / quest
-                    </p>
-                  </div>
-                )}
+                <div className="mt-4 flex flex-col items-center gap-2 loot-pop">
+                  <GearIcon gear={gear} size={88} />
+                  <p className="font-display text-lg text-ink">{gear.name}</p>
+                  <RarityBadge rarity={gear.rarity} />
+                  <p className="text-sm text-ink-soft">
+                    +{gear.xpBonusPct}% XP · +{gear.coinBonus} gold / quest
+                  </p>
+                </div>
+              </>
+            )}
+            {loot.kind === "pet" && (
+              <>
+                <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">
+                  New Pet!
+                </p>
+                <p className="mt-4 font-display text-lg text-ink">
+                  A companion joined your party!
+                </p>
+              </>
+            )}
+            {loot.kind === "pet-duplicate" && (
+              <>
+                <p className="text-xs font-bold uppercase tracking-wide text-amber-700">
+                  Pet Duplicate
+                </p>
+                <div className="mt-4 flex items-center justify-center gap-2 font-display text-2xl text-amber-800">
+                  <GoldCoin size={28} />+{loot.coinsAwarded}
+                </div>
+                <p className="mt-2 text-sm text-ink-soft">+{loot.xpAwarded} XP</p>
               </>
             )}
             <button

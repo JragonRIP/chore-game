@@ -110,7 +110,7 @@ export function GameApp() {
       {g.celebration && (
         <CelebrationModal
           data={g.celebration}
-          onClose={() => g.setCelebration(null)}
+          onClose={() => g.dismissCelebration()}
         />
       )}
 
