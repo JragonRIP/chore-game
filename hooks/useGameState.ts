@@ -4,10 +4,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GEAR_BY_ID, STORE_CHESTS } from "@/lib/gear";
 import {
   applyQuestRewards,
+  canCompleteQuest,
   computeBonuses,
   createInitialState,
+  makeChestId,
   normalizeState,
   rollChestLoot,
+  todayKey,
   xpToNextLevel,
 } from "@/lib/math";
 import { QUESTS } from "@/lib/quests";
@@ -17,11 +20,11 @@ import type {
   GameState,
   GearId,
   LootEvent,
-  PendingChest,
   QuestId,
   ScreenPhase,
   Slot,
   TabId,
+  VaultChest,
 } from "@/lib/types";
 
 export interface Celebration {
@@ -29,21 +32,25 @@ export interface Celebration {
   coins: number;
   questName: string;
   levels: number[];
+  chestsEarned: number;
 }
 
 export function useGameState() {
   const [state, setState] = useState<GameState | null>(null);
   const [tab, setTab] = useState<TabId>("quest");
   const [celebration, setCelebration] = useState<Celebration | null>(null);
-  const chestQueueRef = useRef<PendingChest[]>([]);
-  const [activeChest, setActiveChest] = useState<PendingChest | null>(null);
+  const [openingChest, setOpeningChest] = useState<VaultChest | null>(null);
   const [lootResult, setLootResult] = useState<LootEvent | null>(null);
+  const [chestPhase, setChestPhase] = useState<"idle" | "opening" | "reveal">(
+    "idle",
+  );
+  const [dailyGift, setDailyGift] = useState<VaultChest | null>(null);
   const [parentOpen, setParentOpen] = useState(false);
   const levelTaps = useRef(0);
   const saveReady = useRef(false);
+  const dailyChecked = useRef(false);
 
   useEffect(() => {
-    // Client-only restore from LocalStorage
     // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional hydrate
     setState(normalizeState(loadGame()));
     saveReady.current = true;
@@ -52,6 +59,29 @@ export function useGameState() {
   useEffect(() => {
     if (!state || !saveReady.current) return;
     saveGame(state);
+  }, [state]);
+
+  useEffect(() => {
+    if (!state?.hero || dailyChecked.current) return;
+    dailyChecked.current = true;
+    const today = todayKey();
+    if (state.freeChestDate === today) return;
+    const gift: VaultChest = {
+      id: makeChestId(),
+      type: "normal",
+      reason: "Daily Wooden Chest",
+      earnedAt: Date.now(),
+    };
+    setState((s) =>
+      s
+        ? {
+            ...s,
+            freeChestDate: today,
+            vaultChests: [gift, ...s.vaultChests],
+          }
+        : s,
+    );
+    setDailyGift(gift);
   }, [state]);
 
   const phase: ScreenPhase = !state
@@ -86,100 +116,110 @@ export function useGameState() {
     );
   }, []);
 
-  const pushChest = useCallback((chest: PendingChest) => {
-    setActiveChest((current) => {
-      if (current) {
-        chestQueueRef.current = [...chestQueueRef.current, chest];
-        return current;
-      }
-      return chest;
-    });
-  }, []);
-
-  const enqueueChests = useCallback(
-    (chests: PendingChest[]) => {
-      chests.forEach((c) => pushChest(c));
-    },
-    [pushChest],
-  );
-
   const startQuest = useCallback((id: QuestId) => {
     setState((s) => {
       if (!s) return s;
-      if (s.completedToday.includes(id) || s.activeQuestIds.includes(id)) {
+      if (
+        s.completedToday.includes(id) ||
+        s.activeQuests.some((q) => q.questId === id)
+      ) {
         return s;
       }
-      return { ...s, activeQuestIds: [...s.activeQuestIds, id] };
+      return {
+        ...s,
+        activeQuests: [
+          ...s.activeQuests,
+          { questId: id, startedAt: Date.now() },
+        ],
+      };
     });
   }, []);
 
-  const completeQuest = useCallback(
-    (id: QuestId) => {
-      const quest = QUESTS.find((q) => q.id === id);
-      if (!quest) return;
+  const completeQuest = useCallback((id: QuestId) => {
+    const quest = QUESTS.find((q) => q.id === id);
+    if (!quest) return false;
 
-      setState((s) => {
-        if (!s || s.completedToday.includes(id)) return s;
-        const rewarded = applyQuestRewards(s, quest.xp, quest.coins);
-        queueMicrotask(() => {
-          enqueueChests(rewarded.chests);
-          setCelebration({
-            xp: rewarded.gainedXp,
-            coins: rewarded.gainedCoins,
-            questName: quest.name,
-            levels: rewarded.levelsGained,
-          });
+    let ok = false;
+    setState((s) => {
+      if (!s || s.completedToday.includes(id)) return s;
+      const active = s.activeQuests.find((q) => q.questId === id);
+      if (!canCompleteQuest(active, quest.minutes)) return s;
+      ok = true;
+      const rewarded = applyQuestRewards(s, quest.xp, quest.coins);
+      queueMicrotask(() => {
+        setCelebration({
+          xp: rewarded.gainedXp,
+          coins: rewarded.gainedCoins,
+          questName: quest.name,
+          levels: rewarded.levelsGained,
+          chestsEarned: rewarded.chests.length,
         });
-        return {
-          ...rewarded.state,
-          activeQuestIds: s.activeQuestIds.filter((q) => q !== id),
-          completedToday: [...s.completedToday, id],
-        };
       });
-    },
-    [enqueueChests],
-  );
+      return {
+        ...rewarded.state,
+        activeQuests: s.activeQuests.filter((q) => q.questId !== id),
+        completedToday: [...s.completedToday, id],
+        vaultChests: [...rewarded.chests, ...s.vaultChests],
+      };
+    });
+    return ok;
+  }, []);
 
-  const openChest = useCallback(() => {
-    if (!activeChest) return;
+  const beginOpenChest = useCallback((chest: VaultChest) => {
+    setOpeningChest(chest);
+    setLootResult(null);
+    setChestPhase("opening");
+  }, []);
+
+  const finishOpenChest = useCallback(() => {
+    if (!openingChest) return;
     setState((s) => {
       if (!s) return s;
-      const event = rollChestLoot(s.ownedGear, activeChest.type);
-      queueMicrotask(() => setLootResult(event));
+      if (!s.vaultChests.some((c) => c.id === openingChest.id)) return s;
+      const event = rollChestLoot(s.ownedGear, openingChest.type);
+      queueMicrotask(() => {
+        setLootResult(event);
+        setChestPhase("reveal");
+      });
       if (event.kind === "duplicate") {
-        return { ...s, gold: s.gold + (event.coinsAwarded ?? 0) };
+        return {
+          ...s,
+          gold: s.gold + (event.coinsAwarded ?? 0),
+          vaultChests: s.vaultChests.filter((c) => c.id !== openingChest.id),
+        };
       }
       return {
         ...s,
         ownedGear: [...s.ownedGear, event.gearId],
         lootLog: [event.gearId, ...s.lootLog].slice(0, 40),
+        vaultChests: s.vaultChests.filter((c) => c.id !== openingChest.id),
       };
     });
-  }, [activeChest]);
+  }, [openingChest]);
 
-  const dismissLoot = useCallback(() => {
+  const dismissChest = useCallback(() => {
+    setOpeningChest(null);
     setLootResult(null);
-    const next = chestQueueRef.current[0];
-    chestQueueRef.current = chestQueueRef.current.slice(1);
-    setActiveChest(next ?? null);
+    setChestPhase("idle");
   }, []);
 
-  const buyChest = useCallback(
-    (kind: "common" | "legendary") => {
-      const def = STORE_CHESTS[kind];
-      setState((s) => {
-        if (!s || s.gold < def.price) return s;
-        queueMicrotask(() =>
-          pushChest({
-            type: def.type,
-            reason: `Store: ${def.label}`,
-          }),
-        );
-        return { ...s, gold: s.gold - def.price };
-      });
-    },
-    [pushChest],
-  );
+  const buyChest = useCallback((kind: "common" | "legendary") => {
+    const def = STORE_CHESTS[kind];
+    setState((s) => {
+      if (!s || s.gold < def.price) return s;
+      const chest: VaultChest = {
+        id: makeChestId(),
+        type: def.type,
+        reason: `Store: ${def.label}`,
+        earnedAt: Date.now(),
+      };
+      return {
+        ...s,
+        gold: s.gold - def.price,
+        vaultChests: [chest, ...s.vaultChests],
+      };
+    });
+  }, []);
 
   const buyGear = useCallback((gearId: GearId) => {
     const gear = GEAR_BY_ID[gearId];
@@ -228,12 +268,16 @@ export function useGameState() {
     setState(fresh);
     setTab("quest");
     setCelebration(null);
-    chestQueueRef.current = [];
-    setActiveChest(null);
+    setOpeningChest(null);
     setLootResult(null);
+    setChestPhase("idle");
+    setDailyGift(null);
     setParentOpen(false);
+    dailyChecked.current = false;
     saveGame(fresh);
   }, []);
+
+  const dismissDailyGift = useCallback(() => setDailyGift(null), []);
 
   return {
     state,
@@ -244,10 +288,14 @@ export function useGameState() {
     xpNeeded,
     celebration,
     setCelebration,
-    activeChest,
+    openingChest,
     lootResult,
-    openChest,
-    dismissLoot,
+    chestPhase,
+    beginOpenChest,
+    finishOpenChest,
+    dismissChest,
+    dailyGift,
+    dismissDailyGift,
     finishStory,
     createHero,
     startQuest,

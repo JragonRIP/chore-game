@@ -1,6 +1,7 @@
 "use client";
 
 import { HeroSprite } from "@/components/HeroSprite";
+import { GoldCoin } from "@/components/GoldCoin";
 import type { GameState } from "@/lib/types";
 
 export function PlayerHeader({
@@ -25,6 +26,7 @@ export function PlayerHeader({
             avatar={hero.avatar}
             equipped={state.equipped}
             size={52}
+            showGearBadges={false}
           />
         </div>
         <div className="min-w-0 flex-1">
@@ -41,7 +43,7 @@ export function PlayerHeader({
               Lv {state.level}
             </button>
           </div>
-          <div className="progress-track mt-1.5">
+          <div id="xp-bar-target" className="progress-track mt-1.5">
             <div className="progress-fill" style={{ width: `${pct}%` }} />
           </div>
           <p className="mt-1 text-[11px] text-ink-soft">
@@ -49,10 +51,13 @@ export function PlayerHeader({
             {xpPctBonus > 0 ? ` · +${xpPctBonus}% gear` : ""}
           </p>
         </div>
-        <div className="shrink-0 rounded-2xl bg-gradient-to-br from-gold-soft to-amber-200 px-3 py-2 text-sm font-bold text-amber-900 shadow-sm">
-          {state.gold}
-          <span className="ml-1 text-[10px] font-semibold uppercase tracking-wide opacity-70">
-            gold
+        <div
+          id="gold-target"
+          className="flex shrink-0 items-center gap-1.5 rounded-2xl bg-gradient-to-br from-amber-100 to-amber-200/80 px-2.5 py-2 shadow-sm"
+        >
+          <GoldCoin size={22} />
+          <span className="font-display text-base text-amber-900">
+            {state.gold}
           </span>
         </div>
       </div>

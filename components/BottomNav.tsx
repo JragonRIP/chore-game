@@ -2,11 +2,48 @@
 
 import type { TabId } from "@/lib/types";
 
-const TABS: Array<{ id: TabId; label: string; glyph: string }> = [
-  { id: "quest", label: "Quest", glyph: "Q" },
-  { id: "vault", label: "Vault", glyph: "V" },
-  { id: "armory", label: "Armory", glyph: "A" },
-  { id: "store", label: "Store", glyph: "S" },
+const TABS: Array<{ id: TabId; label: string; icon: React.ReactNode }> = [
+  {
+    id: "quest",
+    label: "Quest",
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M4 19V5a2 2 0 0 1 2-2h9l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z" />
+        <path d="M14 3v5h5M8 13h8M8 17h5" />
+      </svg>
+    ),
+  },
+  {
+    id: "vault",
+    label: "Vault",
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+        <rect x="3" y="8" width="18" height="12" rx="2" />
+        <path d="M7 8V6a5 5 0 0 1 10 0v2" />
+        <circle cx="12" cy="14" r="2" />
+      </svg>
+    ),
+  },
+  {
+    id: "armory",
+    label: "Armory",
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M12 3 4 7v5c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V7l-8-4Z" />
+        <path d="M9 12l2 2 4-4" />
+      </svg>
+    ),
+  },
+  {
+    id: "store",
+    label: "Store",
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M4 9h16l-1.5 10.5A2 2 0 0 1 16.5 21h-9a2 2 0 0 1-2-1.5L4 9Z" />
+        <path d="M8 9V6a4 4 0 0 1 8 0v3" />
+      </svg>
+    ),
+  },
 ];
 
 export function BottomNav({
@@ -33,11 +70,11 @@ export function BottomNav({
               }`}
             >
               <span
-                className={`flex h-7 w-7 items-center justify-center rounded-xl text-xs font-bold ${
+                className={`flex h-8 w-8 items-center justify-center rounded-xl ${
                   active ? "bg-white/20" : "bg-ink/5"
                 }`}
               >
-                {t.glyph}
+                {t.icon}
               </span>
               <span className="text-[11px] font-semibold">{t.label}</span>
             </button>

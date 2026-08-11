@@ -13,10 +13,18 @@ export function GearIcon({
 }) {
   const border = RARITY_COLORS[gear.rarity];
   const c = gearPalette(gear.hue, gear.rarity);
+  const fx =
+    gear.rarity === "enchanted"
+      ? "rarity-enchanted"
+      : gear.rarity === "mythic"
+        ? "rarity-mythic"
+        : gear.rarity === "relic"
+          ? "rarity-relic"
+          : "";
 
   return (
     <div
-      className="relative flex shrink-0 items-center justify-center rounded-2xl"
+      className={`relative flex shrink-0 items-center justify-center rounded-2xl ${fx}`}
       style={{
         width: size,
         height: size,
@@ -39,7 +47,10 @@ export function GearIcon({
               fill="rgba(255,255,255,.9)"
             />
             <path d="M7 14h3v2H7v-2Zm7 0h3v2h-3v-2Z" fill={c.deep} />
-            <path d="M6 16h12v2.5a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V16Z" fill={c.trim} />
+            <path
+              d="M6 16h12v2.5a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V16Z"
+              fill={c.trim}
+            />
           </>
         )}
         {gear.slot === "chestplate" && (
@@ -60,7 +71,10 @@ export function GearIcon({
         )}
         {gear.slot === "boots" && (
           <>
-            <path d="M6 6h5v10H6V6Zm7 0h5v10h-5V6Z" fill="rgba(255,255,255,.88)" />
+            <path
+              d="M6 6h5v10H6V6Zm7 0h5v10h-5V6Z"
+              fill="rgba(255,255,255,.88)"
+            />
             <path d="M4 16h8v4H4v-4Zm8 0h8v4h-8v-4Z" fill={c.trim} />
           </>
         )}
@@ -94,5 +108,4 @@ export function RarityBadge({ rarity }: { rarity: Rarity }) {
   );
 }
 
-/** Back-compat alias while screens migrate */
 export const PixelGearIcon = GearIcon;

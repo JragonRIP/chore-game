@@ -1,7 +1,9 @@
 "use client";
 
 import { STORE_CHESTS, STORE_GEAR } from "@/lib/gear";
+import { ChestIcon } from "@/components/ChestIcon";
 import { GearIcon, RarityBadge } from "@/components/PixelGearIcon";
+import { GoldCoin } from "@/components/GoldCoin";
 import type { GameState, GearId } from "@/lib/types";
 
 export function StoreScreen({
@@ -17,51 +19,46 @@ export function StoreScreen({
     <div className="mx-auto w-full max-w-lg px-3 pb-5 pt-4">
       <h2 className="font-display text-2xl text-ink">Hero Store</h2>
       <p className="mt-0.5 text-sm text-ink-soft">
-        Spend gold on chests or save for a specific piece.
+        Buy chests — they go to your Vault to open.
       </p>
-      <div className="mt-3 inline-flex rounded-2xl bg-gradient-to-br from-gold-soft to-amber-200 px-4 py-2 text-sm font-bold text-amber-900">
-        {state.gold} gold
+      <div className="mt-3 inline-flex items-center gap-1.5 rounded-2xl bg-gradient-to-br from-amber-100 to-amber-200/80 px-3 py-2 text-sm font-bold text-amber-900">
+        <GoldCoin size={20} />
+        {state.gold}
       </div>
 
       <h3 className="mt-5 font-display text-lg text-ink">Chests</h3>
-      <div className="mt-2.5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <article className="surface-strong p-4 text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-sky-2/70 text-3xl">
-            📦
-          </div>
-          <h4 className="mt-3 font-display text-base text-ink">
+      <div className="mt-2.5 grid grid-cols-2 gap-3">
+        <article className="surface-strong flex flex-col items-center p-3 text-center">
+          <ChestIcon variant="wooden" size={72} />
+          <h4 className="mt-2 font-display text-sm text-ink">
             {STORE_CHESTS.common.label}
           </h4>
-          <p className="mt-1 text-sm text-ink-soft">
-            Scrap → Enchanted loot. Great for set hunting.
-          </p>
           <button
             type="button"
             disabled={state.gold < STORE_CHESTS.common.price}
             onClick={() => onBuyChest("common")}
-            className="btn btn-secondary mt-4 w-full text-sm"
+            className="btn btn-secondary mt-3 min-h-10 w-full gap-1 text-xs"
           >
-            Buy · {STORE_CHESTS.common.price} gold
+            <GoldCoin size={16} />
+            {STORE_CHESTS.common.price}
           </button>
         </article>
 
-        <article className="surface-strong p-4 text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-gold-soft to-amber-100 text-3xl pulse-soft">
-            👑
+        <article className="surface-strong flex flex-col items-center p-3 text-center">
+          <div className="pulse-soft">
+            <ChestIcon variant="golden" size={72} />
           </div>
-          <h4 className="mt-3 font-display text-base shimmer-text">
+          <h4 className="mt-2 font-display text-sm shimmer-text">
             {STORE_CHESTS.legendary.label}
           </h4>
-          <p className="mt-1 text-sm text-ink-soft">
-            Enchanted → Mythic, tiny Relic chance!
-          </p>
           <button
             type="button"
             disabled={state.gold < STORE_CHESTS.legendary.price}
             onClick={() => onBuyChest("legendary")}
-            className="btn btn-primary mt-4 w-full text-sm"
+            className="btn btn-primary mt-3 min-h-10 w-full gap-1 text-xs"
           >
-            Buy · {STORE_CHESTS.legendary.price} gold
+            <GoldCoin size={16} />
+            {STORE_CHESTS.legendary.price}
           </button>
         </article>
       </div>
@@ -90,9 +87,10 @@ export function StoreScreen({
                   type="button"
                   disabled={!canBuy}
                   onClick={() => onBuyGear(g.id)}
-                  className="btn btn-primary min-h-10 px-3 text-xs"
+                  className="btn btn-primary min-h-10 gap-1 px-3 text-xs"
                 >
-                  {g.storePrice}g
+                  <GoldCoin size={14} />
+                  {g.storePrice}
                 </button>
               )}
             </div>

@@ -8,8 +8,7 @@ export function loadGame(): GameState {
   try {
     const raw = window.localStorage.getItem(KEY);
     if (!raw) return createInitialState();
-    const parsed = JSON.parse(raw) as GameState;
-    if (!parsed || parsed.version !== 1) return createInitialState();
+    const parsed = JSON.parse(raw) as unknown;
     return normalizeState(parsed);
   } catch {
     return createInitialState();

@@ -13,6 +13,9 @@ import { HeroSprite } from "@/components/HeroSprite";
 import { GearIcon, RarityBadge } from "@/components/PixelGearIcon";
 import type { GameState, GearId, Slot } from "@/lib/types";
 
+const LEFT_SLOTS: Array<Slot | "pet"> = ["helmet", "chestplate", "leggings", "pet"];
+const RIGHT_SLOTS: Slot[] = ["boots", "weapon"];
+
 export function Armory({
   state,
   activeSetId,
@@ -36,6 +39,43 @@ export function Armory({
     [state.ownedGear, slotFilter],
   );
 
+  const slotButton = (slot: Slot | "pet") => {
+    if (slot === "pet") {
+      return (
+        <div
+          key="pet"
+          className="surface flex h-[4.5rem] w-[4.5rem] flex-col items-center justify-center gap-1 opacity-60"
+        >
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-dashed border-ink/25 text-xs text-ink/40">
+            ?
+          </div>
+          <span className="text-[9px] font-semibold text-ink-soft">Pet</span>
+        </div>
+      );
+    }
+    const id = state.equipped[slot];
+    const gear = id ? GEAR_BY_ID[id] : null;
+    return (
+      <button
+        key={slot}
+        type="button"
+        onClick={() => (gear ? onUnequip(slot) : setSlotFilter(slot))}
+        className="surface flex h-[4.5rem] w-[4.5rem] flex-col items-center justify-center gap-1"
+      >
+        {gear ? (
+          <GearIcon gear={gear} size={36} />
+        ) : (
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-dashed border-ink/20 text-ink/30">
+            +
+          </div>
+        )}
+        <span className="text-[9px] font-semibold text-ink-soft">
+          {SLOT_LABELS[slot].slice(0, 5)}
+        </span>
+      </button>
+    );
+  };
+
   return (
     <div className="mx-auto w-full max-w-lg px-3 pb-5 pt-4">
       <h2 className="font-display text-2xl text-ink">Armory</h2>
@@ -43,54 +83,86 @@ export function Armory({
         Equip gear for XP and coin bonuses.
       </p>
 
-      <div className="surface-strong mt-4 flex items-center gap-4 p-4">
-        <div className="flex h-32 w-32 shrink-0 items-center justify-center rounded-3xl bg-gradient-to-br from-sky-2 to-white ring-1 ring-ink/5">
-          <HeroSprite
-            avatar={hero.avatar}
-            equipped={state.equipped}
-            size={120}
-          />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="font-display text-lg text-ink">{hero.name}</p>
-          <p className="mt-1 text-sm text-ink-soft">
-            Equip pieces below to power up your hero.
-          </p>
+      <div className="surface-strong mt-4 flex items-center justify-between gap-2 px-2 py-4">
+        <div className="flex flex-col gap-2">{LEFT_SLOTS.map(slotButton)}</div>
+        <div className="flex flex-1 flex-col items-center">
+          <div className="flex h-44 w-44 items-center justify-center rounded-[2rem] bg-gradient-to-br from-sky-2 to-white ring-1 ring-ink/5 sm:h-52 sm:w-52">
+            <HeroSprite
+              avatar={hero.avatar}
+              equipped={state.equipped}
+              size={180}
+              showGearBadges={false}
+            />
+          </div>
+          <p className="mt-2 font-display text-base text-ink">{hero.name}</p>
           {activeSetId && (
-            <p className="mt-2 rounded-xl bg-xp/10 px-2.5 py-1.5 text-xs font-bold text-emerald-700">
-              Set bonus: {GEAR_SETS.find((s) => s.id === activeSetId)?.name}
+            <p className="mt-1 rounded-xl bg-xp/10 px-2.5 py-1 text-[10px] font-bold text-emerald-700">
+              Set: {GEAR_SETS.find((s) => s.id === activeSetId)?.name}
             </p>
           )}
         </div>
+        <div className="flex flex-col gap-2">
+          {RIGHT_SLOTS.map(slotButton)}
+          <div className="h-[4.5rem] w-[4.5rem]" />
+        </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-5 gap-2">
-        {SLOTS.map((slot) => {
-          const id = state.equipped[slot];
-          const gear = id ? GEAR_BY_ID[id] : null;
+      <h3 className="mt-5 font-display text-lg text-ink">Your Gear</h3>
+      <div className="hide-scrollbar mt-2 flex gap-2 overflow-x-auto pb-1">
+        <button
+          type="button"
+          onClick={() => setSlotFilter("all")}
+          className={`chip shrink-0 ${slotFilter === "all" ? "chip-active" : ""}`}
+        >
+          All
+        </button>
+        {SLOTS.map((s) => (
+          <button
+            key={s}
+            type="button"
+            onClick={() => setSlotFilter(s)}
+            className={`chip shrink-0 ${slotFilter === s ? "chip-active" : ""}`}
+          >
+            {SLOT_LABELS[s]}
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-3 flex flex-col gap-2.5">
+        {owned.length === 0 && (
+          <p className="text-sm text-ink-soft">
+            No gear yet — open chests from the Vault.
+          </p>
+        )}
+        {owned.map((g) => {
+          const equipped = state.equipped[g.slot] === g.id;
           return (
-            <button
-              key={slot}
-              type="button"
-              onClick={() => (gear ? onUnequip(slot) : setSlotFilter(slot))}
-              className="surface flex flex-col items-center gap-1.5 p-2"
-            >
-              {gear ? (
-                <GearIcon gear={gear} size={40} />
-              ) : (
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-dashed border-ink/20 text-ink/30">
-                  +
+            <div key={g.id} className="surface flex items-center gap-3 p-3">
+              <GearIcon gear={g} size={52} />
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-display text-sm text-ink">{g.name}</p>
+                <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                  <RarityBadge rarity={g.rarity} />
+                  <span className="text-xs font-semibold text-emerald-700">
+                    +{g.xpBonusPct}% XP
+                  </span>
                 </div>
-              )}
-              <span className="text-[10px] font-semibold text-ink-soft">
-                {SLOT_LABELS[slot].slice(0, 4)}
-              </span>
-            </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => (equipped ? onUnequip(g.slot) : onEquip(g.id))}
+                className={`btn min-h-10 px-3 text-xs ${
+                  equipped ? "btn-ghost" : "btn-primary"
+                }`}
+              >
+                {equipped ? "Unequip" : "Equip"}
+              </button>
+            </div>
           );
         })}
       </div>
 
-      <h3 className="mt-5 font-display text-lg text-ink">Set Hunt</h3>
+      <h3 className="mt-6 font-display text-lg text-ink">Set Hunt</h3>
       <div className="mt-2 flex flex-col gap-2.5">
         {GEAR_SETS.map((set) => {
           const pieces = getSetPieces(set.id);
@@ -114,73 +186,13 @@ export function Armory({
                   }}
                 />
               </div>
-              <p className="mt-1.5 text-xs text-ink-soft">
-                Set bonus: +{set.bonusXpPct}% XP · +{set.bonusCoins} coins
-              </p>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="hide-scrollbar mt-4 flex gap-2 overflow-x-auto pb-1">
-        <button
-          type="button"
-          onClick={() => setSlotFilter("all")}
-          className={`chip shrink-0 ${slotFilter === "all" ? "chip-active" : ""}`}
-        >
-          All
-        </button>
-        {SLOTS.map((s) => (
-          <button
-            key={s}
-            type="button"
-            onClick={() => setSlotFilter(s)}
-            className={`chip shrink-0 ${slotFilter === s ? "chip-active" : ""}`}
-          >
-            {SLOT_LABELS[s]}
-          </button>
-        ))}
-      </div>
-
-      <div className="mt-3 flex flex-col gap-2.5">
-        {owned.length === 0 && (
-          <p className="text-sm text-ink-soft">
-            No gear yet — open chests from level-ups or the Store.
-          </p>
-        )}
-        {owned.map((g) => {
-          const equipped = state.equipped[g.slot] === g.id;
-          return (
-            <div key={g.id} className="surface flex items-center gap-3 p-3">
-              <GearIcon gear={g} size={52} />
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-display text-sm text-ink">{g.name}</p>
-                <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                  <RarityBadge rarity={g.rarity} />
-                  <span className="text-xs font-semibold text-emerald-700">
-                    +{g.xpBonusPct}% XP
-                  </span>
-                  <span className="text-xs font-semibold text-amber-700">
-                    +{g.coinBonus} gold
-                  </span>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => (equipped ? onUnequip(g.slot) : onEquip(g.id))}
-                className={`btn min-h-10 px-3 text-xs ${
-                  equipped ? "btn-ghost" : "btn-primary"
-                }`}
-              >
-                {equipped ? "Unequip" : "Equip"}
-              </button>
             </div>
           );
         })}
       </div>
 
       <p className="mt-4 text-center text-xs text-ink-soft">
-        Catalog: {ALL_GEAR.length} unique pieces in the realm.
+        Catalog: {ALL_GEAR.length} unique pieces
       </p>
     </div>
   );

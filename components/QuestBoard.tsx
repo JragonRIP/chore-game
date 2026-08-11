@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { GoldCoin } from "@/components/GoldCoin";
 import { QUESTS, QUEST_CATEGORIES } from "@/lib/quests";
 import type { GameState, QuestCategory, QuestId } from "@/lib/types";
 
@@ -13,36 +14,24 @@ export function QuestBoard({
   onStart: (id: QuestId) => void;
   onOpenActive: (id: QuestId) => void;
 }) {
-  const [query, setQuery] = useState("");
   const [category, setCategory] = useState<(typeof QUEST_CATEGORIES)[number]>(
     "All Quests",
   );
 
   const filtered = useMemo(() => {
     return QUESTS.filter((q) => {
-      const catOk =
-        category === "All Quests" || q.category === (category as QuestCategory);
-      const qOk =
-        !query.trim() ||
-        q.name.toLowerCase().includes(query.toLowerCase()) ||
-        q.goal.toLowerCase().includes(query.toLowerCase());
-      return catOk && qOk;
+      return (
+        category === "All Quests" || q.category === (category as QuestCategory)
+      );
     });
-  }, [category, query]);
+  }, [category]);
 
   return (
     <div className="mx-auto w-full max-w-lg px-3 pb-5 pt-4">
       <h2 className="font-display text-2xl text-ink">Quest Board</h2>
       <p className="mt-0.5 text-sm text-ink-soft">Pick a chore. Become a legend.</p>
 
-      <input
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search quests…"
-        className="field mt-4"
-      />
-
-      <div className="hide-scrollbar mt-3 flex gap-2 overflow-x-auto pb-1">
+      <div className="hide-scrollbar mt-4 flex gap-2 overflow-x-auto pb-1">
         {QUEST_CATEGORIES.map((c) => (
           <button
             key={c}
@@ -58,7 +47,7 @@ export function QuestBoard({
       <div className="mt-4 flex flex-col gap-3.5">
         {filtered.map((quest, i) => {
           const done = state.completedToday.includes(quest.id);
-          const active = state.activeQuestIds.includes(quest.id);
+          const active = state.activeQuests.some((q) => q.questId === quest.id);
           return (
             <article
               key={quest.id}
@@ -90,7 +79,7 @@ export function QuestBoard({
                     +{quest.xp} XP
                   </span>
                   <span className="chip border-amber-200 bg-amber-50 text-amber-800">
-                    +{quest.coins} Gold
+                    <GoldCoin size={14} />+{quest.coins}
                   </span>
                 </div>
                 <p className="mt-3 text-sm leading-relaxed text-ink-soft">

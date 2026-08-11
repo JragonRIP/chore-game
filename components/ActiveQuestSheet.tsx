@@ -1,19 +1,40 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { GoldCoin } from "@/components/GoldCoin";
 import { QUESTS } from "@/lib/quests";
-import type { QuestId } from "@/lib/types";
+import {
+  canCompleteQuest,
+  formatCountdown,
+  questRemainingMs,
+} from "@/lib/math";
+import type { ActiveQuest, QuestId } from "@/lib/types";
 
 export function ActiveQuestSheet({
   questId,
+  active,
   onClose,
   onComplete,
 }: {
   questId: QuestId;
+  active: ActiveQuest | undefined;
   onClose: () => void;
   onComplete: (id: QuestId) => void;
 }) {
   const quest = QUESTS.find((q) => q.id === questId);
-  if (!quest) return null;
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const t = window.setInterval(() => setNow(Date.now()), 250);
+    return () => window.clearInterval(t);
+  }, []);
+
+  if (!quest || !active) return null;
+
+  const remaining = questRemainingMs(active, quest.minutes, now);
+  const ready = canCompleteQuest(active, quest.minutes, now);
+  const total = quest.minutes * 60 * 1000;
+  const progress = Math.min(100, ((total - remaining) / total) * 100);
 
   return (
     <div className="fixed inset-0 z-40 flex flex-col justify-end">
@@ -46,28 +67,49 @@ export function ActiveQuestSheet({
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-4">
           <p className="text-base leading-relaxed text-ink-soft">{quest.goal}</p>
 
+          <div className="mt-4 rounded-2xl bg-sky-1/90 p-4">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-bold uppercase tracking-wide text-ink-soft">
+                Timer
+              </p>
+              <p
+                className={`font-display text-2xl tabular-nums ${
+                  ready ? "text-emerald-600" : "text-ink"
+                }`}
+              >
+                {ready ? "Ready!" : formatCountdown(remaining)}
+              </p>
+            </div>
+            <div className="progress-track mt-3">
+              <div
+                className="progress-fill"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <p className="mt-2 text-sm text-ink-soft">
+              {ready
+                ? "Time’s up — tap Complete when the chore is done."
+                : `Work on the chore for ${quest.minutes} minute${quest.minutes === 1 ? "" : "s"} before you can finish.`}
+            </p>
+          </div>
+
           <div className="mt-4 flex flex-wrap gap-2">
             <span className="chip border-emerald-200 bg-emerald-50 text-emerald-700">
               +{quest.xp} XP
             </span>
             <span className="chip border-amber-200 bg-amber-50 text-amber-800">
-              +{quest.coins} Gold
+              <GoldCoin size={14} />+{quest.coins}
             </span>
-            <span className="chip">{quest.category}</span>
-          </div>
-
-          <div className="mt-5 rounded-2xl bg-sky-1/80 px-4 py-3 text-sm text-ink-soft">
-            Go complete the chore in the real world, then come back and tap
-            Complete when you&apos;re done.
           </div>
 
           <div className="mt-auto flex flex-col gap-2.5 pt-6">
             <button
               type="button"
+              disabled={!ready}
               onClick={() => onComplete(quest.id)}
               className="btn btn-secondary w-full text-base"
             >
-              Complete Quest
+              {ready ? "Complete Quest" : `Wait ${formatCountdown(remaining)}`}
             </button>
             <button
               type="button"

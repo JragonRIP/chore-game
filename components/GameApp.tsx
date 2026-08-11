@@ -8,7 +8,8 @@ import { HeroCreate } from "@/components/HeroCreate";
 import { IntroStory } from "@/components/IntroStory";
 import {
   CelebrationModal,
-  ChestModal,
+  ChestOpenModal,
+  DailyChestGift,
   ParentPlaceholder,
 } from "@/components/Modals";
 import { PlayerHeader } from "@/components/PlayerHeader";
@@ -48,6 +49,10 @@ export function GameApp() {
     g.completeQuest(id);
   };
 
+  const activeForSheet = openQuestId
+    ? g.state.activeQuests.find((q) => q.questId === openQuestId)
+    : undefined;
+
   return (
     <div className="realm-bg relative flex h-dvh flex-col overflow-hidden text-ink">
       <PlayerHeader
@@ -68,8 +73,7 @@ export function GameApp() {
         {g.tab === "vault" && (
           <TreasureVault
             state={g.state}
-            onComplete={handleComplete}
-            onOpenActive={setOpenQuestId}
+            onOpenChest={g.beginOpenChest}
           />
         )}
         {g.tab === "armory" && (
@@ -91,9 +95,10 @@ export function GameApp() {
 
       <BottomNav tab={g.tab} onChange={g.setTab} />
 
-      {openQuestId && (
+      {openQuestId && activeForSheet && (
         <ActiveQuestSheet
           questId={openQuestId}
+          active={activeForSheet}
           onClose={() => setOpenQuestId(null)}
           onComplete={handleComplete}
         />
@@ -106,13 +111,20 @@ export function GameApp() {
         />
       )}
 
-      {g.activeChest && !g.celebration && (
-        <ChestModal
-          chest={g.activeChest}
-          loot={g.lootResult}
-          onOpen={g.openChest}
-          onDismiss={g.dismissLoot}
-        />
+      {g.openingChest &&
+        (g.chestPhase === "opening" || g.chestPhase === "reveal") &&
+        !g.celebration && (
+          <ChestOpenModal
+            chest={g.openingChest}
+            phase={g.chestPhase}
+            loot={g.lootResult}
+            onFinishOpen={g.finishOpenChest}
+            onDismiss={g.dismissChest}
+          />
+        )}
+
+      {g.dailyGift && !g.celebration && !g.openingChest && (
+        <DailyChestGift onDismiss={g.dismissDailyGift} />
       )}
 
       {g.parentOpen && (

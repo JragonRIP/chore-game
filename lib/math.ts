@@ -6,13 +6,14 @@ import {
   RARITY_ORDER,
 } from "./gear";
 import type {
+  ActiveQuest,
   EquippedMap,
   GameState,
   GearDef,
   GearId,
   LootEvent,
-  PendingChest,
   Rarity,
+  VaultChest,
 } from "./types";
 
 export function todayKey(d = new Date()): string {
@@ -22,7 +23,6 @@ export function todayKey(d = new Date()): string {
   return `${y}-${m}-${day}`;
 }
 
-/** Progressive XP to go from `level` → `level + 1` */
 export function xpToNextLevel(level: number): number {
   const curve = [100, 120, 150, 180, 220, 270, 330, 400, 480, 570];
   if (level <= curve.length) return curve[level - 1]!;
@@ -44,9 +44,13 @@ export function emptyEquipped(): EquippedMap {
   };
 }
 
+export function makeChestId(): string {
+  return `chest-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 export function createInitialState(): GameState {
   return {
-    version: 1,
+    version: 2,
     hasSeenStory: false,
     hero: null,
     level: 1,
@@ -54,20 +58,68 @@ export function createInitialState(): GameState {
     gold: 0,
     ownedGear: [],
     equipped: emptyEquipped(),
-    activeQuestIds: [],
+    activeQuests: [],
     completedToday: [],
     completedDate: todayKey(),
     lootLog: [],
-    pendingChest: null,
+    vaultChests: [],
+    freeChestDate: null,
   };
 }
 
-export function normalizeState(raw: GameState): GameState {
-  const next = { ...raw };
-  if (next.completedDate !== todayKey()) {
-    next.completedToday = [];
-    next.completedDate = todayKey();
+/** Migrate older saves and roll daily resets. */
+export function normalizeState(raw: unknown): GameState {
+  const base = createInitialState();
+  if (!raw || typeof raw !== "object") return base;
+  const r = raw as Record<string, unknown>;
+
+  const activeQuests: ActiveQuest[] = Array.isArray(r.activeQuests)
+    ? (r.activeQuests as ActiveQuest[])
+    : Array.isArray(r.activeQuestIds)
+      ? (r.activeQuestIds as string[]).map((questId) => ({
+          questId,
+          startedAt: Date.now() - 60_000,
+        }))
+      : [];
+
+  let next: GameState = {
+    ...base,
+    hasSeenStory: Boolean(r.hasSeenStory),
+    hero: (r.hero as GameState["hero"]) ?? null,
+    level: typeof r.level === "number" ? r.level : 1,
+    xp: typeof r.xp === "number" ? r.xp : 0,
+    gold: typeof r.gold === "number" ? r.gold : 0,
+    ownedGear: Array.isArray(r.ownedGear) ? (r.ownedGear as string[]) : [],
+    equipped: {
+      ...emptyEquipped(),
+      ...((r.equipped as EquippedMap) ?? {}),
+    },
+    activeQuests,
+    completedToday: Array.isArray(r.completedToday)
+      ? (r.completedToday as string[])
+      : [],
+    completedDate:
+      typeof r.completedDate === "string" ? r.completedDate : todayKey(),
+    lootLog: Array.isArray(r.lootLog) ? (r.lootLog as string[]) : [],
+    vaultChests: Array.isArray(r.vaultChests)
+      ? (r.vaultChests as VaultChest[])
+      : [],
+    freeChestDate:
+      typeof r.freeChestDate === "string" || r.freeChestDate === null
+        ? (r.freeChestDate as string | null)
+        : null,
+  };
+
+  const today = todayKey();
+  if (next.completedDate !== today) {
+    next = {
+      ...next,
+      completedToday: [],
+      completedDate: today,
+      activeQuests: [],
+    };
   }
+
   return next;
 }
 
@@ -104,6 +156,25 @@ export function computeBonuses(state: GameState): {
   return { xpPct, coins, activeSetId };
 }
 
+export function questRemainingMs(
+  active: ActiveQuest,
+  minutes: number,
+  now = Date.now(),
+): number {
+  const total = minutes * 60 * 1000;
+  const elapsed = now - active.startedAt;
+  return Math.max(0, total - elapsed);
+}
+
+export function canCompleteQuest(
+  active: ActiveQuest | undefined,
+  minutes: number,
+  now = Date.now(),
+): boolean {
+  if (!active) return false;
+  return questRemainingMs(active, minutes, now) <= 0;
+}
+
 export function applyQuestRewards(
   state: GameState,
   baseXp: number,
@@ -113,7 +184,7 @@ export function applyQuestRewards(
   gainedXp: number;
   gainedCoins: number;
   levelsGained: number[];
-  chests: PendingChest[];
+  chests: VaultChest[];
 } {
   const bonuses = computeBonuses(state);
   const gainedXp = Math.max(
@@ -126,17 +197,20 @@ export function applyQuestRewards(
   let xp = state.xp + gainedXp;
   const gold = state.gold + gainedCoins;
   const levelsGained: number[] = [];
-  const chests: PendingChest[] = [];
+  const chests: VaultChest[] = [];
 
   while (xp >= xpToNextLevel(level)) {
     xp -= xpToNextLevel(level);
     level += 1;
     levelsGained.push(level);
+    const legendary = isLegendaryLevel(level);
     chests.push({
-      type: isLegendaryLevel(level) ? "legendary" : "normal",
-      reason: isLegendaryLevel(level)
-        ? `Legendary Level ${level} Chest!`
-        : `Level ${level} Treasure Chest!`,
+      id: makeChestId(),
+      type: legendary ? "legendary" : "normal",
+      reason: legendary
+        ? `Level ${level} Golden Chest`
+        : `Level ${level} Wooden Chest`,
+      earnedAt: Date.now(),
     });
   }
 
@@ -168,7 +242,6 @@ function rarityPool(chest: "normal" | "legendary"): Rarity {
       { rarity: "mythic" as const, weight: 2 },
     ]).rarity;
   }
-  // legendary — tiny relic chance
   return pickWeighted([
     { rarity: "forged" as const, weight: 10 },
     { rarity: "enchanted" as const, weight: 40 },
@@ -200,4 +273,11 @@ export function rollChestLoot(
 
 export function rarityRank(r: Rarity): number {
   return RARITY_ORDER.indexOf(r);
+}
+
+export function formatCountdown(ms: number): string {
+  const totalSec = Math.ceil(ms / 1000);
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
 }

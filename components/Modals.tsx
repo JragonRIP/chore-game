@@ -1,20 +1,12 @@
 "use client";
 
+import { useEffect, useState, type CSSProperties } from "react";
 import { GEAR_BY_ID } from "@/lib/gear";
+import { ChestIcon } from "@/components/ChestIcon";
 import { GearIcon, RarityBadge } from "@/components/PixelGearIcon";
+import { GoldCoin } from "@/components/GoldCoin";
 import type { Celebration } from "@/hooks/useGameState";
-import type { LootEvent, PendingChest } from "@/lib/types";
-
-function makeConfettiBits() {
-  return Array.from({ length: 36 }, (_, i) => ({
-    id: i,
-    left: `${3 + ((i * 13) % 94)}%`,
-    delay: `${(i % 10) * 0.04}s`,
-    color: ["#ff6b4a", "#0d9488", "#e8a017", "#10b981", "#38bdf8", "#f6d28a"][
-      i % 6
-    ]!,
-  }));
-}
+import type { LootEvent, VaultChest } from "@/lib/types";
 
 export function CelebrationModal({
   data,
@@ -23,90 +15,120 @@ export function CelebrationModal({
   data: Celebration;
   onClose: () => void;
 }) {
-  const bits = makeConfettiBits();
+  const [phase, setPhase] = useState<"burst" | "fly" | "done">("burst");
+
+  useEffect(() => {
+    const t1 = window.setTimeout(() => setPhase("fly"), 450);
+    const t2 = window.setTimeout(() => setPhase("done"), 1400);
+    const t3 = window.setTimeout(onClose, 1750);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+      window.clearTimeout(t3);
+    };
+  }, [onClose, data]);
+
+  const bits = Array.from({ length: 18 }, (_, i) => ({
+    id: i,
+    kind: i % 2 === 0 ? "xp" : "gold",
+    angle: (i / 18) * Math.PI * 2,
+  }));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-4 backdrop-blur-sm sm:items-center">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        {bits.map((b) => (
-          <span
-            key={`${data.questName}-${b.id}`}
-            className="confetti-bit absolute top-0 h-2.5 w-2.5 rounded-sm"
-            style={{
-              left: b.left,
-              background: b.color,
-              animationDelay: b.delay,
-            }}
-          />
-        ))}
-      </div>
-      <div className="surface-strong relative w-full max-w-sm p-5 rise-in">
-        <p className="text-xs font-bold uppercase tracking-[0.2em] text-teal">
-          Victory
-        </p>
-        <h3 className="mt-1 font-display text-2xl text-ink">Quest Complete!</h3>
-        <p className="mt-2 text-ink-soft">{data.questName}</p>
-        <div className="mt-4 grid grid-cols-2 gap-2">
-          <div className="rounded-2xl bg-emerald-50 px-3 py-3 text-center">
-            <p className="font-display text-xl text-emerald-700">+{data.xp}</p>
-            <p className="text-xs font-semibold text-emerald-700/70">XP</p>
-          </div>
-          <div className="rounded-2xl bg-amber-50 px-3 py-3 text-center">
-            <p className="font-display text-xl text-amber-800">+{data.coins}</p>
-            <p className="text-xs font-semibold text-amber-800/70">Gold</p>
-          </div>
-        </div>
-        {data.levels.length > 0 && (
-          <p className="mt-4 rounded-2xl bg-teal/10 px-3 py-2 text-center font-display text-teal-deep">
-            Level up → {data.levels.join(", ")}!
+    <div className="pointer-events-none fixed inset-0 z-50 overflow-hidden">
+      <div className="absolute inset-0 bg-ink/25 backdrop-blur-[1px]" />
+      <div className="absolute left-1/2 top-1/2 w-[min(90vw,22rem)] -translate-x-1/2 -translate-y-1/2">
+        <div
+          className={`surface-strong p-5 text-center transition duration-500 ${
+            phase === "burst"
+              ? "scale-100 opacity-100"
+              : "scale-150 opacity-0"
+          }`}
+        >
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-teal">
+            Victory
           </p>
-        )}
-        <button type="button" onClick={onClose} className="btn btn-primary mt-5 w-full">
-          Awesome!
-        </button>
+          <h3 className="mt-1 font-display text-2xl text-ink">Quest Complete!</h3>
+          <p className="mt-1 text-sm text-ink-soft">{data.questName}</p>
+        </div>
       </div>
+
+      {bits.map((b) => (
+        <span
+          key={b.id}
+          className={`reward-fly absolute left-1/2 top-1/2 flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full font-bold shadow-md ${
+            b.kind === "xp"
+              ? "bg-emerald-400 text-[10px] text-white"
+              : "bg-amber-300"
+          } ${phase === "fly" || phase === "done" ? (b.kind === "xp" ? "fly-to-xp" : "fly-to-gold") : "burst-out"}`}
+          style={
+            {
+              "--tx": `${Math.cos(b.angle) * 90}px`,
+              "--ty": `${Math.sin(b.angle) * 70}px`,
+              animationDelay: `${(b.id % 6) * 0.03}s`,
+            } as CSSProperties
+          }
+        >
+          {b.kind === "xp" ? `+${Math.max(1, Math.round(data.xp / 6))}` : <GoldCoin size={18} />}
+        </span>
+      ))}
+
+      {phase === "done" && data.chestsEarned > 0 && (
+        <p className="absolute bottom-28 left-1/2 -translate-x-1/2 rounded-full bg-white/90 px-4 py-2 text-sm font-bold text-teal-deep shadow rise-in">
+          +{data.chestsEarned} chest{data.chestsEarned > 1 ? "s" : ""} → Vault
+        </p>
+      )}
     </div>
   );
 }
 
-export function ChestModal({
+export function ChestOpenModal({
   chest,
+  phase,
   loot,
-  onOpen,
+  onFinishOpen,
   onDismiss,
 }: {
-  chest: PendingChest;
+  chest: VaultChest;
+  phase: "opening" | "reveal";
   loot: LootEvent | null;
-  onOpen: () => void;
+  onFinishOpen: () => void;
   onDismiss: () => void;
 }) {
   const gear = loot ? GEAR_BY_ID[loot.gearId] : null;
+  const legendary = chest.type === "legendary";
+
+  useEffect(() => {
+    if (phase !== "opening") return;
+    const t = window.setTimeout(onFinishOpen, legendary ? 1600 : 900);
+    return () => window.clearTimeout(t);
+  }, [phase, onFinishOpen, legendary]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-4 backdrop-blur-sm sm:items-center">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/45 p-4 backdrop-blur-sm sm:items-center">
       <div className="surface-strong w-full max-w-sm p-5 text-center rise-in">
-        {!loot ? (
+        {phase === "opening" && (
           <>
             <div
-              className={`mx-auto flex h-24 w-24 items-center justify-center rounded-3xl text-5xl ${
-                chest.type === "legendary"
-                  ? "bg-gradient-to-br from-gold-soft to-amber-200 pulse-soft"
-                  : "bg-sky-2/80"
+              className={`mx-auto flex h-32 w-32 items-center justify-center rounded-3xl ${
+                legendary
+                  ? "bg-gradient-to-br from-amber-200 to-yellow-100 chest-open-legendary"
+                  : "bg-amber-50 chest-open-wooden"
               }`}
             >
-              {chest.type === "legendary" ? "👑" : "📦"}
+              <ChestIcon
+                variant={legendary ? "golden" : "wooden"}
+                size={110}
+              />
             </div>
-            <h3 className="mt-4 font-display text-xl text-ink">{chest.reason}</h3>
-            <p className="mt-2 text-sm text-ink-soft">
-              {chest.type === "legendary"
-                ? "A Legendary chest! Mythic gear awaits… maybe even a Relic."
-                : "A treasure chest appears! Tap to open."}
-            </p>
-            <button type="button" onClick={onOpen} className="btn btn-primary mt-5 w-full">
-              Open Chest
-            </button>
+            <h3 className="mt-4 font-display text-xl text-ink">
+              {legendary ? "Opening Golden Chest…" : "Opening Wooden Chest…"}
+            </h3>
+            <p className="mt-2 text-sm text-ink-soft">{chest.reason}</p>
           </>
-        ) : (
+        )}
+
+        {phase === "reveal" && loot && (
           <>
             {loot.kind === "duplicate" ? (
               <>
@@ -114,21 +136,21 @@ export function ChestModal({
                   Duplicate
                 </p>
                 <p className="mt-2 text-ink-soft">
-                  You already own{" "}
+                  Already owned{" "}
                   <span className="font-semibold text-ink">{gear?.name}</span>
                 </p>
-                <p className="mt-4 font-display text-2xl text-amber-700">
-                  +{loot.coinsAwarded} Gold
-                </p>
+                <div className="mt-4 flex items-center justify-center gap-2 font-display text-2xl text-amber-800">
+                  <GoldCoin size={28} />+{loot.coinsAwarded}
+                </div>
               </>
             ) : (
               <>
                 <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">
-                  New Gear
+                  New Gear!
                 </p>
                 {gear && (
-                  <div className="mt-4 flex flex-col items-center gap-2">
-                    <GearIcon gear={gear} size={80} />
+                  <div className="mt-4 flex flex-col items-center gap-2 loot-pop">
+                    <GearIcon gear={gear} size={88} />
                     <p className="font-display text-lg text-ink">{gear.name}</p>
                     <RarityBadge rarity={gear.rarity} />
                     <p className="text-sm text-ink-soft">
@@ -141,12 +163,36 @@ export function ChestModal({
             <button
               type="button"
               onClick={onDismiss}
-              className="btn btn-primary mt-5 w-full"
+              className="btn btn-primary pointer-events-auto mt-5 w-full"
             >
               Claim
             </button>
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+export function DailyChestGift({
+  onDismiss,
+}: {
+  onDismiss: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-4 backdrop-blur-sm sm:items-center">
+      <div className="surface-strong w-full max-w-sm p-5 text-center rise-in">
+        <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-3xl bg-amber-50 loot-pop">
+          <ChestIcon variant="wooden" size={100} />
+        </div>
+        <h3 className="mt-4 font-display text-2xl text-ink">Daily Gift!</h3>
+        <p className="mt-2 text-sm text-ink-soft">
+          A free Wooden Chest was added to your Vault. Open it whenever
+          you&apos;re ready!
+        </p>
+        <button type="button" onClick={onDismiss} className="btn btn-primary mt-5 w-full">
+          Awesome!
+        </button>
       </div>
     </div>
   );

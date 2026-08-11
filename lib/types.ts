@@ -14,6 +14,7 @@ export type AvatarId =
   | "archer"
   | "dragon-rider"
   | "berserker";
+export type ChestType = "normal" | "legendary";
 
 export type QuestId = string;
 export type GearId = string;
@@ -69,13 +70,20 @@ export interface LootEvent {
   coinsAwarded?: number;
 }
 
-export interface PendingChest {
-  type: "normal" | "legendary";
+export interface ActiveQuest {
+  questId: QuestId;
+  startedAt: number;
+}
+
+export interface VaultChest {
+  id: string;
+  type: ChestType;
   reason: string;
+  earnedAt: number;
 }
 
 export interface GameState {
-  version: 1;
+  version: 2;
   hasSeenStory: boolean;
   hero: HeroProfile | null;
   level: number;
@@ -83,11 +91,12 @@ export interface GameState {
   gold: number;
   ownedGear: GearId[];
   equipped: EquippedMap;
-  activeQuestIds: QuestId[];
+  activeQuests: ActiveQuest[];
   completedToday: QuestId[];
-  completedDate: string; // YYYY-MM-DD local
+  completedDate: string;
   lootLog: GearId[];
-  pendingChest: PendingChest | null;
+  vaultChests: VaultChest[];
+  freeChestDate: string | null;
 }
 
 export type ScreenPhase = "story" | "create" | "play";
