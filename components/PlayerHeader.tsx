@@ -147,14 +147,6 @@ export function PlayerHeader({
             >
               Lv {state.level}
             </button>
-            {state.streakDays > 0 && (
-              <span
-                className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800"
-                title="Quest streak"
-              >
-                🔥 {state.streakDays}
-              </span>
-            )}
             <div className="hide-scrollbar flex min-w-0 shrink items-center gap-1 overflow-x-auto">
               <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
                 +{xpPctBonus}% XP
