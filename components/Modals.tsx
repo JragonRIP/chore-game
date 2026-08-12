@@ -432,6 +432,8 @@ export function ParentPanel({
   onReset,
   onForceUnlockPets,
   onUpdateQuest,
+  onSetEncounterChancePct,
+  onStartTestChore,
 }: {
   state: GameState;
   onGrant: (xp: number, gold: number) => void;
@@ -439,6 +441,8 @@ export function ParentPanel({
   onReset: () => void;
   onForceUnlockPets: () => void;
   onUpdateQuest: (questId: QuestId, patch: QuestOverride) => void;
+  onSetEncounterChancePct: (pct: number) => void;
+  onStartTestChore: () => void;
 }) {
   const [unlocked, setUnlocked] = useState(false);
   const [pin, setPin] = useState("");
@@ -448,6 +452,8 @@ export function ParentPanel({
   const [confirmReset, setConfirmReset] = useState(false);
   const [editId, setEditId] = useState<QuestId | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [tab, setTab] = useState<"home" | "testing">("home");
+  const chancePct = state.encounterChancePct ?? 25;
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -628,12 +634,102 @@ export function ParentPanel({
           Level {state.level} · {state.xp} XP · {state.gold} gold
         </p>
 
+        <div className="mt-3 flex gap-2">
+          <button
+            type="button"
+            onClick={() => setTab("home")}
+            className={`chip flex-1 justify-center ${tab === "home" ? "chip-active" : ""}`}
+          >
+            Home
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("testing")}
+            className={`chip flex-1 justify-center ${tab === "testing" ? "chip-active" : ""}`}
+          >
+            Testing
+          </button>
+        </div>
+
         {toast && (
           <p className="mt-3 rounded-xl bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">
             {toast}
           </p>
         )}
 
+        {tab === "testing" ? (
+          <>
+            <div className="mt-4 rounded-2xl bg-rose-50 p-3">
+              <p className="text-xs font-bold uppercase tracking-wide text-ink-soft">
+                Encounter chance
+              </p>
+              <p className="mt-1 text-sm text-ink-soft">
+                After a chore completes, roll for a monster fight.
+              </p>
+              <div className="mt-3 flex items-center gap-3">
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={chancePct}
+                  onChange={(e) =>
+                    onSetEncounterChancePct(Number(e.target.value))
+                  }
+                  className="w-full accent-rose-500"
+                  aria-label="Encounter chance percent"
+                />
+                <span className="w-12 shrink-0 text-right font-display text-lg text-ink">
+                  {chancePct}%
+                </span>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {[0, 25, 50, 75, 100].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => onSetEncounterChancePct(n)}
+                    className={`chip ${
+                      chancePct === n
+                        ? "border-rose-300 bg-rose-100 text-rose-800"
+                        : "border-ink/10 bg-white text-ink-soft"
+                    }`}
+                  >
+                    {n}%
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-3 rounded-2xl bg-amber-50/90 p-3">
+              <p className="text-xs font-bold uppercase tracking-wide text-ink-soft">
+                Test chore
+              </p>
+              <p className="mt-1 text-sm text-ink-soft">
+                Fake 3-second chore with no gold or XP. Uses the encounter
+                chance above — set to 100% to always fight.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  onStartTestChore();
+                }}
+                className="btn btn-secondary mt-3 min-h-11 w-full text-sm"
+              >
+                Start test chore
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn btn-primary mt-5 w-full"
+            >
+              Close
+            </button>
+          </>
+        ) : (
+          <>
         <div className="mt-4 rounded-2xl bg-sky-1/80 p-3">
           <p className="text-xs font-bold uppercase tracking-wide text-ink-soft">
             Add XP
@@ -784,6 +880,8 @@ export function ParentPanel({
         >
           Reset All Progress
         </button>
+          </>
+        )}
       </div>
     </div>
   );

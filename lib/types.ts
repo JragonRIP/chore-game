@@ -226,6 +226,8 @@ export interface GameState {
   dungeonDate: string | null;
   /** Active daily dungeon run, if any. */
   activeDungeon: ActiveDungeon | null;
+  /** Encounter chance after a real quest (0–100). Default 25. */
+  encounterChancePct: number;
   /** Last time the app was active (for offline idle). */
   lastActiveAt: number;
   /** Unclaimed gold/XP earned while away. */

@@ -137,6 +137,11 @@ function normalizeIdleClaim(
   return { gold, xp };
 }
 
+function normalizeEncounterChancePct(raw: unknown): number {
+  if (typeof raw !== "number" || !Number.isFinite(raw)) return 25;
+  return Math.max(0, Math.min(100, Math.round(raw)));
+}
+
 export function emptyEquipped(): EquippedMap {
   return {
     helmet: null,
@@ -184,6 +189,7 @@ export function createInitialState(): GameState {
     weeklyQuestWeek: null,
     dungeonDate: null,
     activeDungeon: null,
+    encounterChancePct: 25,
     lastActiveAt: Date.now(),
     idleClaim: null,
     streakDays: 0,
@@ -322,6 +328,7 @@ export function normalizeState(raw: unknown): GameState {
       typeof r.weeklyQuestWeek === "string" ? r.weeklyQuestWeek : null,
     dungeonDate: typeof r.dungeonDate === "string" ? r.dungeonDate : null,
     activeDungeon: normalizeActiveDungeon(r.activeDungeon),
+    encounterChancePct: normalizeEncounterChancePct(r.encounterChancePct),
     lastActiveAt:
       typeof r.lastActiveAt === "number" && r.lastActiveAt > 0
         ? r.lastActiveAt

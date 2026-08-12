@@ -56,6 +56,15 @@ export const ENCOUNTERS: EncounterDef[] = [
 ];
 
 export const ENCOUNTER_CHANCE = 0.25;
+export const ENCOUNTER_CHANCE_DEFAULT_PCT = 25;
+
+export function encounterChanceFromState(pct: number | undefined | null): number {
+  const n =
+    typeof pct === "number" && Number.isFinite(pct)
+      ? pct
+      : ENCOUNTER_CHANCE_DEFAULT_PCT;
+  return Math.max(0, Math.min(1, n / 100));
+}
 
 export function rollEncounter(): EncounterDef {
   return ENCOUNTERS[Math.floor(Math.random() * ENCOUNTERS.length)]!;

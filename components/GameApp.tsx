@@ -28,6 +28,7 @@ import { PetsScreen } from "@/components/PetsScreen";
 import { PlayerHeader } from "@/components/PlayerHeader";
 import { QuestBoard } from "@/components/QuestBoard";
 import { StoreScreen } from "@/components/StoreScreen";
+import { TestChoreSheet } from "@/components/TestChoreSheet";
 import { TreasureVault } from "@/components/TreasureVault";
 import { useGameState } from "@/hooks/useGameState";
 import { useOnline } from "@/hooks/useOnline";
@@ -169,6 +170,14 @@ export function GameApp() {
         />
       )}
 
+      {g.testChoreStartedAt != null && (
+        <TestChoreSheet
+          startedAt={g.testChoreStartedAt}
+          onClose={g.cancelTestChore}
+          onComplete={g.completeTestChore}
+        />
+      )}
+
       {g.celebration && (
         <CelebrationModal
           data={g.celebration}
@@ -278,6 +287,8 @@ export function GameApp() {
           onReset={g.resetProgressSoft}
           onForceUnlockPets={g.parentForceUnlockPets}
           onUpdateQuest={g.parentUpdateQuest}
+          onSetEncounterChancePct={g.parentSetEncounterChancePct}
+          onStartTestChore={g.startTestChore}
         />
       )}
 

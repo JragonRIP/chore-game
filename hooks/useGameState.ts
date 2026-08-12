@@ -10,7 +10,7 @@ import {
   pickDungeonQuests,
 } from "@/lib/dungeon";
 import {
-  ENCOUNTER_CHANCE,
+  encounterChanceFromState,
   rollEncounter,
   rollEncounterReward,
   type EncounterDef,
@@ -120,6 +120,9 @@ export function useGameState() {
   const [encounterRewardFlash, setEncounterRewardFlash] =
     useState<EncounterReward | null>(null);
   const [evolveAnim, setEvolveAnim] = useState<EvolveAnim | null>(null);
+  const [testChoreStartedAt, setTestChoreStartedAt] = useState<number | null>(
+    null,
+  );
   const levelTaps = useRef(0);
   const saveReady = useRef(false);
   const dailyChecked = useRef(false);
@@ -363,7 +366,7 @@ export function useGameState() {
             ...evolveHints,
           ];
         }
-        if (Math.random() < ENCOUNTER_CHANCE) {
+        if (Math.random() < encounterChanceFromState(s.encounterChancePct)) {
           pendingEncounter.current = rollEncounter();
         }
       });
@@ -986,6 +989,33 @@ export function useGameState() {
     setState((s) => (s ? { ...s, petsUnlocked: true } : s));
   }, []);
 
+  const parentSetEncounterChancePct = useCallback((pct: number) => {
+    const next = Math.max(0, Math.min(100, Math.round(pct)));
+    setState((s) => (s ? { ...s, encounterChancePct: next } : s));
+  }, []);
+
+  const startTestChore = useCallback(() => {
+    setParentOpen(false);
+    setTestChoreStartedAt(Date.now());
+  }, []);
+
+  const cancelTestChore = useCallback(() => {
+    setTestChoreStartedAt(null);
+  }, []);
+
+  const completeTestChore = useCallback(() => {
+    if (testChoreStartedAt == null) return;
+    if (Date.now() - testChoreStartedAt < 3000) return;
+    setTestChoreStartedAt(null);
+    setState((s) => {
+      if (!s) return s;
+      if (Math.random() < encounterChanceFromState(s.encounterChancePct)) {
+        queueMicrotask(() => setEncounter(rollEncounter()));
+      }
+      return s;
+    });
+  }, [testChoreStartedAt]);
+
   const parentUpdateQuest = useCallback(
     (questId: QuestId, patch: QuestOverride) => {
       setState((s) => {
@@ -1040,6 +1070,7 @@ export function useGameState() {
     setEncounter(null);
     setEncounterRewardFlash(null);
     setEvolveAnim(null);
+    setTestChoreStartedAt(null);
     pendingPetsUnlock.current = false;
     pendingStreak.current = null;
     pendingEvolveHints.current = [];
@@ -1105,9 +1136,14 @@ export function useGameState() {
     dismissEvolveHint,
     parentGrant,
     parentForceUnlockPets,
+    parentSetEncounterChancePct,
     parentUpdateQuest,
     parentOpen,
     setParentOpen,
+    startTestChore,
+    cancelTestChore,
+    completeTestChore,
+    testChoreStartedAt,
     onLevelBadgeTap,
     resetProgressSoft,
     petsUnlockOpen,
