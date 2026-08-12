@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ChestIcon, chestLabel, chestIconVariant } from "@/components/ChestIcon";
+import { EncounterSprite } from "@/components/EncounterSprite";
 import { GoldCoin } from "@/components/GoldCoin";
 import { GearIcon } from "@/components/PixelGearIcon";
 import { GEAR_BY_ID } from "@/lib/gear";
@@ -64,8 +65,14 @@ export function EncounterModal({
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-rose-600">
           Encounter!
         </p>
-        <div className="mt-3 text-5xl">{encounter.icon}</div>
-        <h3 className="mt-2 font-display text-2xl text-ink">{encounter.name}</h3>
+        <div className="mt-3 rounded-[1.75rem] bg-gradient-to-b from-sky-2/80 to-white py-3 ring-1 ring-ink/5">
+          <EncounterSprite
+            encounter={encounter}
+            size={168}
+            animate={phase === "fight"}
+          />
+        </div>
+        <h3 className="mt-3 font-display text-2xl text-ink">{encounter.name}</h3>
         <p className="mt-1 text-sm text-ink-soft">{encounter.blurb}</p>
 
         {phase === "fight" && (

@@ -12,8 +12,11 @@ export type EncounterReward =
 export interface EncounterDef {
   id: EncounterId;
   name: string;
+  /** Fallback emoji if sprites fail to load. */
   icon: string;
   blurb: string;
+  /** Two-frame idle / fight animation under /public/encounters. */
+  frames: [string, string];
   /** Mash taps needed to win. */
   tapsNeeded: number;
   seconds: number;
@@ -25,6 +28,7 @@ export const ENCOUNTERS: EncounterDef[] = [
     name: "Slime",
     icon: "🟢",
     blurb: "A bouncy slime blocks the path!",
+    frames: ["/encounters/slime-1.png", "/encounters/slime-2.png"],
     tapsNeeded: 12,
     seconds: 6,
   },
@@ -33,6 +37,7 @@ export const ENCOUNTERS: EncounterDef[] = [
     name: "Shadow Bat",
     icon: "🦇",
     blurb: "A shadow bat swoops in!",
+    frames: ["/encounters/shadow-bat-1.png", "/encounters/shadow-bat-2.png"],
     tapsNeeded: 16,
     seconds: 7,
   },
@@ -41,6 +46,10 @@ export const ENCOUNTERS: EncounterDef[] = [
     name: "Treasure Goblin",
     icon: "👺",
     blurb: "A treasure goblin flees with a chest!",
+    frames: [
+      "/encounters/treasure-goblin-1.png",
+      "/encounters/treasure-goblin-2.png",
+    ],
     tapsNeeded: 20,
     seconds: 8,
   },
