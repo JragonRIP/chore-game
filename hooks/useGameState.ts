@@ -23,6 +23,7 @@ import {
   applyPetXpGain,
   canEvolvePet,
   defaultPetProgress,
+  evolveHintsFromLevels,
   familiarFromName,
   getPetProgress,
   MAX_PET_LEVEL,
@@ -86,6 +87,9 @@ export function useGameState() {
   const [familiarReveal, setFamiliarReveal] = useState<FamiliarId | null>(
     null,
   );
+  const [evolveHint, setEvolveHint] = useState<"adult" | "battle" | null>(
+    null,
+  );
   const [streakPopup, setStreakPopup] = useState<StreakPopup | null>(null);
   const levelTaps = useRef(0);
   const saveReady = useRef(false);
@@ -93,6 +97,22 @@ export function useGameState() {
   const pendingPetsUnlock = useRef(false);
   const pendingStreak = useRef<StreakPopup | null>(null);
   const pendingChestLoot = useRef<LootEvent | null>(null);
+  const pendingEvolveHints = useRef<Array<"adult" | "battle">>([]);
+
+  const flushPendingModals = useCallback(() => {
+    if (pendingStreak.current) {
+      setStreakPopup(pendingStreak.current);
+      pendingStreak.current = null;
+      return;
+    }
+    if (pendingPetsUnlock.current) {
+      pendingPetsUnlock.current = false;
+      setPetsUnlockOpen(true);
+      return;
+    }
+    const nextHint = pendingEvolveHints.current.shift();
+    if (nextHint) setEvolveHint(nextHint);
+  }, []);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional hydrate
@@ -212,6 +232,10 @@ export function useGameState() {
       );
       const streak = tickQuestStreak(rewarded.state);
       const extraChests = streak.chest ? [streak.chest] : [];
+      const evolveHints = evolveHintsFromLevels(
+        rewarded.petLevelsGained,
+        s.evolveHintSeen,
+      );
       queueMicrotask(() => {
         setCelebration({
           xp: rewarded.gainedXp,
@@ -231,6 +255,12 @@ export function useGameState() {
           };
         }
         if (unlockingPets) pendingPetsUnlock.current = true;
+        if (evolveHints.length) {
+          pendingEvolveHints.current = [
+            ...pendingEvolveHints.current,
+            ...evolveHints,
+          ];
+        }
       });
       return {
         ...rewarded.state,
@@ -246,6 +276,14 @@ export function useGameState() {
         streakDate: streak.streakDate,
         streakBest: streak.streakBest,
         questsCompleted: s.questsCompleted + 1,
+        evolveHintSeen: {
+          adult:
+            Boolean(s.evolveHintSeen?.adult) ||
+            evolveHints.includes("adult"),
+          battle:
+            Boolean(s.evolveHintSeen?.battle) ||
+            evolveHints.includes("battle"),
+        },
       };
     });
     return ok;
@@ -253,29 +291,19 @@ export function useGameState() {
 
   const dismissCelebration = useCallback(() => {
     setCelebration(null);
-    if (pendingStreak.current) {
-      setStreakPopup(pendingStreak.current);
-      pendingStreak.current = null;
-      return;
-    }
-    if (pendingPetsUnlock.current) {
-      pendingPetsUnlock.current = false;
-      setPetsUnlockOpen(true);
-    }
-  }, []);
+    flushPendingModals();
+  }, [flushPendingModals]);
 
   const dismissStreakPopup = useCallback(() => {
     setStreakPopup(null);
-    if (pendingPetsUnlock.current) {
-      pendingPetsUnlock.current = false;
-      setPetsUnlockOpen(true);
-    }
-  }, []);
+    flushPendingModals();
+  }, [flushPendingModals]);
 
   const dismissPetsUnlock = useCallback(() => {
     setPetsUnlockOpen(false);
     setTab("pets");
-  }, []);
+    flushPendingModals();
+  }, [flushPendingModals]);
 
   const replaceState = useCallback((next: GameState) => {
     setState(normalizeState(next));
@@ -441,6 +469,22 @@ export function useGameState() {
       const current = getPetProgress(s.petProgress, petId);
       if (current.level >= MAX_PET_LEVEL) return s;
       const applied = applyPetXpGain(current, def.xp);
+      const evolveHints = evolveHintsFromLevels(
+        applied.levelsGained,
+        s.evolveHintSeen,
+      );
+      if (evolveHints.length) {
+        queueMicrotask(() => {
+          pendingEvolveHints.current = [
+            ...pendingEvolveHints.current,
+            ...evolveHints,
+          ];
+          if (!celebration) {
+            const next = pendingEvolveHints.current.shift();
+            if (next) setEvolveHint(next);
+          }
+        });
+      }
       return {
         ...s,
         petProgress: {
@@ -451,9 +495,17 @@ export function useGameState() {
           ...bag,
           [treatId]: bag[treatId] - 1,
         },
+        evolveHintSeen: {
+          adult:
+            Boolean(s.evolveHintSeen?.adult) ||
+            evolveHints.includes("adult"),
+          battle:
+            Boolean(s.evolveHintSeen?.battle) ||
+            evolveHints.includes("battle"),
+        },
       };
     });
-  }, []);
+  }, [celebration]);
 
   const buyXpBottle = useCallback((bottleId: XpBottleId) => {
     const def = XP_BOTTLE_BY_ID[bottleId];
@@ -644,6 +696,11 @@ export function useGameState() {
     setFamiliarReveal(null);
   }, []);
 
+  const dismissEvolveHint = useCallback(() => {
+    setEvolveHint(null);
+    flushPendingModals();
+  }, [flushPendingModals]);
+
   const evolvePet = useCallback((petId: PetId) => {
     setState((s) => {
       if (!s || !s.ownedPets.includes(petId)) return s;
@@ -758,9 +815,11 @@ export function useGameState() {
     setParentOpen(false);
     setPetsUnlockOpen(false);
     setFamiliarReveal(null);
+    setEvolveHint(null);
     setStreakPopup(null);
     pendingPetsUnlock.current = false;
     pendingStreak.current = null;
+    pendingEvolveHints.current = [];
     dailyChecked.current = false;
     saveGame(fresh);
   }, []);
@@ -808,6 +867,8 @@ export function useGameState() {
     evolvePet,
     familiarReveal,
     dismissFamiliarReveal,
+    evolveHint,
+    dismissEvolveHint,
     parentGrant,
     parentForceUnlockPets,
     parentUpdateQuest,

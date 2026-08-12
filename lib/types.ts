@@ -184,6 +184,8 @@ export interface GameState {
   petNames: Record<string, string>;
   /** Shown the familiar-friend popup once per nickname (Maple, Caliper). */
   familiarRevealSeen: Record<FamiliarId, boolean>;
+  /** First-time evolve tutorials at pet Lv 5 and Lv 10. */
+  evolveHintSeen: { adult: boolean; battle: boolean };
   /** Parent edits to catalog quests. */
   questOverrides: Record<string, QuestOverride>;
   activeQuests: ActiveQuest[];

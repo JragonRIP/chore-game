@@ -297,6 +297,40 @@ export function FamiliarRevealModal({
   );
 }
 
+export function EvolveHintModal({
+  kind,
+  onDismiss,
+}: {
+  kind: "adult" | "battle";
+  onDismiss: () => void;
+}) {
+  const adult = kind === "adult";
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/45 p-4 backdrop-blur-sm sm:items-center">
+      <div className="surface-strong w-full max-w-sm p-5 text-center rise-in">
+        <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-3xl bg-gradient-to-br from-violet-100 to-amber-50 loot-pop text-5xl">
+          {adult ? "✨" : "⚔️"}
+        </div>
+        <h3 className="mt-4 font-display text-2xl text-ink">
+          {adult ? "Ready to Evolve!" : "Battle Form Ready!"}
+        </h3>
+        <p className="mt-2 text-sm text-ink-soft">
+          {adult
+            ? "Your companion reached level 5 and can evolve into its adult form. You’ll need an Evolution Stone — look for them in chests — then tap Evolve on the Pets tab."
+            : "Your companion reached level 10 and can evolve into its Battle form. Use an Evolution Stone on the Pets tab to transform them."}
+        </p>
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="btn btn-primary mt-5 w-full"
+        >
+          Got it
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function PetsUnlockModal({ onDismiss }: { onDismiss: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/45 p-4 backdrop-blur-sm sm:items-center">

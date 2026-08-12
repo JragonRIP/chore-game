@@ -337,6 +337,22 @@ export function emptyFamiliarRevealSeen(): Record<FamiliarId, boolean> {
   return { maple: false, caliper: false };
 }
 
+export function emptyEvolveHintSeen(): { adult: boolean; battle: boolean } {
+  return { adult: false, battle: false };
+}
+
+/** Which evolve tutorials to show after leveling (once each, forever). */
+export function evolveHintsFromLevels(
+  levelsGained: number[],
+  seen: { adult: boolean; battle: boolean } | undefined,
+): Array<"adult" | "battle"> {
+  const hints: Array<"adult" | "battle"> = [];
+  const s = seen ?? emptyEvolveHintSeen();
+  if (!s.adult && levelsGained.some((l) => l >= 5)) hints.push("adult");
+  if (!s.battle && levelsGained.some((l) => l >= 10)) hints.push("battle");
+  return hints;
+}
+
 export function familiarFromName(
   name: string | null | undefined,
 ): FamiliarId | null {

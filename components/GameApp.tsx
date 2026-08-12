@@ -13,6 +13,7 @@ import {
   CelebrationModal,
   ChestOpenModal,
   DailyChestGift,
+  EvolveHintModal,
   FamiliarRevealModal,
   ParentPanel,
   PetsUnlockModal,
@@ -188,12 +189,25 @@ export function GameApp() {
           />
         )}
 
-      {g.dailyGift &&
+      {g.evolveHint &&
         !g.celebration &&
         !g.openingChest &&
         !g.streakPopup &&
         !g.petsUnlockOpen &&
         !g.familiarReveal && (
+          <EvolveHintModal
+            kind={g.evolveHint}
+            onDismiss={g.dismissEvolveHint}
+          />
+        )}
+
+      {g.dailyGift &&
+        !g.celebration &&
+        !g.openingChest &&
+        !g.streakPopup &&
+        !g.petsUnlockOpen &&
+        !g.familiarReveal &&
+        !g.evolveHint && (
           <DailyChestGift onDismiss={g.dismissDailyGift} />
         )}
 

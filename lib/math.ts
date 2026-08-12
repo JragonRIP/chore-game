@@ -15,6 +15,7 @@ import {
   applyPetXpGain,
   computePetQuestExtras,
   emptyFamiliarRevealSeen,
+  emptyEvolveHintSeen,
   getPetProgress,
   normalizePetNames,
   petGainsXpFromQuest,
@@ -126,6 +127,7 @@ export function createInitialState(): GameState {
     petProgress: {},
     petNames: {},
     familiarRevealSeen: emptyFamiliarRevealSeen(),
+    evolveHintSeen: emptyEvolveHintSeen(),
     questOverrides: {},
     activeQuests: [],
     completedToday: [],
@@ -222,6 +224,18 @@ export function normalizeState(raw: unknown): GameState {
         r.familiarRevealSeen &&
           typeof r.familiarRevealSeen === "object" &&
           (r.familiarRevealSeen as Record<string, unknown>).caliper,
+      ),
+    },
+    evolveHintSeen: {
+      adult: Boolean(
+        r.evolveHintSeen &&
+          typeof r.evolveHintSeen === "object" &&
+          (r.evolveHintSeen as Record<string, unknown>).adult,
+      ),
+      battle: Boolean(
+        r.evolveHintSeen &&
+          typeof r.evolveHintSeen === "object" &&
+          (r.evolveHintSeen as Record<string, unknown>).battle,
       ),
     },
     questOverrides,
