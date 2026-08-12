@@ -226,6 +226,10 @@ export interface GameState {
   dungeonDate: string | null;
   /** Active daily dungeon run, if any. */
   activeDungeon: ActiveDungeon | null;
+  /** Last time the app was active (for offline idle). */
+  lastActiveAt: number;
+  /** Unclaimed gold/XP earned while away. */
+  idleClaim: { gold: number; xp: number } | null;
   /** Consecutive days with at least one completed quest. */
   streakDays: number;
   /** Calendar day the streak last incremented. */

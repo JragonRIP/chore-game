@@ -16,6 +16,7 @@ import {
   type EncounterDef,
   type EncounterReward,
 } from "@/lib/encounters";
+import { settleAwayIdle } from "@/lib/idle";
 import {
   applyFlatRewards,
   applyQuestRewards,
@@ -119,10 +120,10 @@ export function useGameState() {
   const [encounterRewardFlash, setEncounterRewardFlash] =
     useState<EncounterReward | null>(null);
   const [evolveAnim, setEvolveAnim] = useState<EvolveAnim | null>(null);
-  const [idleStartedAt, setIdleStartedAt] = useState(() => Date.now());
   const levelTaps = useRef(0);
   const saveReady = useRef(false);
   const dailyChecked = useRef(false);
+  const idleSettled = useRef(false);
   const pendingPetsUnlock = useRef(false);
   const pendingStreak = useRef<StreakPopup | null>(null);
   const pendingChestLoot = useRef<LootEvent | null>(null);
@@ -154,6 +155,50 @@ export function useGameState() {
     setState(normalizeState(loadGame()));
     saveReady.current = true;
   }, []);
+
+  // Convert time away into a pending idle claim once per session.
+  useEffect(() => {
+    if (!state || !saveReady.current || idleSettled.current) return;
+    idleSettled.current = true;
+    const settled = settleAwayIdle(
+      state.lastActiveAt ?? Date.now(),
+      state.idleClaim,
+    );
+    setState((s) =>
+      s
+        ? {
+            ...s,
+            idleClaim: settled.idleClaim,
+            lastActiveAt: settled.lastActiveAt,
+          }
+        : s,
+    );
+  }, [state]);
+
+  // Keep lastActiveAt fresh while the app is open so closed-time accrues correctly.
+  useEffect(() => {
+    if (!state || !saveReady.current) return;
+
+    const bump = () => {
+      setState((s) =>
+        s ? { ...s, lastActiveAt: Date.now() } : s,
+      );
+    };
+
+    const onVis = () => {
+      if (document.visibilityState === "hidden") bump();
+    };
+    const onHide = () => bump();
+
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("pagehide", onHide);
+    const interval = window.setInterval(bump, 30_000);
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("pagehide", onHide);
+      window.clearInterval(interval);
+    };
+  }, [Boolean(state)]);
 
   useEffect(() => {
     if (!state || !saveReady.current) return;
@@ -414,10 +459,13 @@ export function useGameState() {
     setEncounterRewardFlash(null);
   }, []);
 
-  const claimIdle = useCallback((gold: number, xp: number) => {
-    if (gold <= 0 && xp <= 0) return;
+  const claimIdle = useCallback(() => {
     setState((s) => {
-      if (!s) return s;
+      if (!s?.idleClaim) return s;
+      const { gold, xp } = s.idleClaim;
+      if (gold <= 0 && xp <= 0) {
+        return { ...s, idleClaim: null, lastActiveAt: Date.now() };
+      }
       const flat = applyFlatRewards(s, xp, gold);
       if (flat.levelsGained.length) playLevelUp();
       return {
@@ -427,9 +475,10 @@ export function useGameState() {
         gold: flat.gold,
         goldPeak: flat.goldPeak,
         vaultChests: [...flat.chests, ...s.vaultChests],
+        idleClaim: null,
+        lastActiveAt: Date.now(),
       };
     });
-    setIdleStartedAt(Date.now());
   }, []);
 
   const dismissCelebration = useCallback(() => {
@@ -991,12 +1040,12 @@ export function useGameState() {
     setEncounter(null);
     setEncounterRewardFlash(null);
     setEvolveAnim(null);
-    setIdleStartedAt(Date.now());
     pendingPetsUnlock.current = false;
     pendingStreak.current = null;
     pendingEvolveHints.current = [];
     pendingEncounter.current = null;
     dailyChecked.current = false;
+    idleSettled.current = false;
     saveGame(fresh);
   }, []);
 
@@ -1030,7 +1079,6 @@ export function useGameState() {
     resolveEncounter,
     encounterRewardFlash,
     dismissEncounterReward,
-    idleStartedAt,
     claimIdle,
     buyChest,
     buyXpBottle,

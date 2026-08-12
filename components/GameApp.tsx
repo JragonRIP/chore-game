@@ -103,7 +103,6 @@ export function GameApp() {
             state={g.state}
             onOpen={handleOpen}
             onStartDungeon={g.startDungeon}
-            idleStartedAt={g.idleStartedAt}
             onClaimIdle={g.claimIdle}
           />
         )}

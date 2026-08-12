@@ -125,6 +125,18 @@ function normalizeActiveDungeon(raw: unknown): ActiveDungeon | null {
   return { questIds, clearedIds };
 }
 
+function normalizeIdleClaim(
+  raw: unknown,
+): { gold: number; xp: number } | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const c = raw as Record<string, unknown>;
+  const gold =
+    typeof c.gold === "number" && c.gold > 0 ? Math.floor(c.gold) : 0;
+  const xp = typeof c.xp === "number" && c.xp > 0 ? Math.floor(c.xp) : 0;
+  if (gold <= 0 && xp <= 0) return null;
+  return { gold, xp };
+}
+
 export function emptyEquipped(): EquippedMap {
   return {
     helmet: null,
@@ -172,6 +184,8 @@ export function createInitialState(): GameState {
     weeklyQuestWeek: null,
     dungeonDate: null,
     activeDungeon: null,
+    lastActiveAt: Date.now(),
+    idleClaim: null,
     streakDays: 0,
     streakDate: null,
     streakBest: 0,
@@ -308,6 +322,11 @@ export function normalizeState(raw: unknown): GameState {
       typeof r.weeklyQuestWeek === "string" ? r.weeklyQuestWeek : null,
     dungeonDate: typeof r.dungeonDate === "string" ? r.dungeonDate : null,
     activeDungeon: normalizeActiveDungeon(r.activeDungeon),
+    lastActiveAt:
+      typeof r.lastActiveAt === "number" && r.lastActiveAt > 0
+        ? r.lastActiveAt
+        : Date.now(),
+    idleClaim: normalizeIdleClaim(r.idleClaim),
     streakDays: asCount(r.streakDays),
     streakDate: typeof r.streakDate === "string" ? r.streakDate : null,
     streakBest: asCount(r.streakBest),

@@ -1,72 +1,48 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { GoldCoin } from "@/components/GoldCoin";
-import {
-  IDLE_CAP_MS,
-  IDLE_MAX_GOLD,
-  IDLE_MAX_XP,
-  IDLE_START_MS,
-  idleRewardsForElapsed,
-} from "@/lib/idle";
+import { IDLE_MAX_GOLD, IDLE_MAX_XP } from "@/lib/idle";
 import { playClick, playIdleClaim } from "@/lib/sounds";
 
 export function IdleBanner({
-  startedAt,
+  claim,
   onClaim,
 }: {
-  startedAt: number;
-  onClaim: (gold: number, xp: number) => void;
+  claim: { gold: number; xp: number } | null;
+  onClaim: () => void;
 }) {
-  const [now, setNow] = useState(Date.now());
+  if (!claim || (claim.gold <= 0 && claim.xp <= 0)) return null;
 
-  useEffect(() => {
-    const t = window.setInterval(() => setNow(Date.now()), 2000);
-    return () => window.clearInterval(t);
-  }, []);
-
-  const elapsed = Math.max(0, now - startedAt);
-  const { gold, xp, progress } = idleRewardsForElapsed(elapsed);
-  const ready = gold > 0 || xp > 0;
-  const capped = elapsed >= IDLE_CAP_MS;
-  const warming = elapsed < IDLE_START_MS;
-
-  if (warming && elapsed < 15_000) return null;
+  const progress = Math.min(
+    1,
+    Math.max(claim.gold / IDLE_MAX_GOLD, claim.xp / IDLE_MAX_XP),
+  );
 
   return (
     <div className="surface mt-4 overflow-hidden p-3">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-[10px] font-bold uppercase tracking-wide text-teal-deep">
-            Realm Idle
+            While You Were Away
           </p>
           <p className="mt-0.5 text-sm font-semibold text-ink">
-            {warming
-              ? "Stay a minute to start earning…"
-              : capped
-                ? "Idle full — claim your haul!"
-                : "Gold & XP while you’re here"}
+            The realm gathered loot for you
           </p>
           <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-ink-soft">
             <span className="inline-flex items-center gap-1 font-bold text-amber-800">
-              <GoldCoin size={12} />
-              {gold}/{IDLE_MAX_GOLD}
+              <GoldCoin size={12} />+{claim.gold}
             </span>
-            <span className="font-bold text-emerald-700">
-              {xp}/{IDLE_MAX_XP} XP
-            </span>
+            <span className="font-bold text-emerald-700">+{claim.xp} XP</span>
           </p>
         </div>
         <button
           type="button"
-          disabled={!ready}
           onClick={() => {
-            if (!ready) return;
             playClick();
             playIdleClaim();
-            onClaim(gold, xp);
+            onClaim();
           }}
-          className="btn btn-primary shrink-0 min-h-9 px-3 text-xs disabled:opacity-40"
+          className="btn btn-primary shrink-0 min-h-9 px-3 text-xs"
         >
           Claim
         </button>

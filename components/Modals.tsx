@@ -164,7 +164,7 @@ export function ChestOpenModal({
   }, [phase, loot]);
 
   const openClass = crystal
-    ? "bg-gradient-to-br from-violet-200 via-cyan-100 to-white chest-open-crystal"
+    ? "bg-gradient-to-br from-pink-100 via-rose-50 to-white chest-open-crystal"
     : legendary
       ? "bg-gradient-to-br from-amber-200 to-yellow-100 chest-open-legendary"
       : "bg-amber-50 chest-open-wooden";

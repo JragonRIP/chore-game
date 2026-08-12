@@ -142,35 +142,54 @@ function GoldenChest() {
 function CrystalChest() {
   return (
     <>
-      <ellipse cx="32" cy="58" rx="18" ry="3.5" fill="#152033" opacity="0.16" />
-      {/* aura */}
-      <ellipse cx="32" cy="36" rx="24" ry="26" fill="#67E8F9" opacity="0.28" />
-      <ellipse cx="32" cy="34" rx="16" ry="18" fill="#A78BFA" opacity="0.22" />
-      {/* crystal body — faceted gem chest */}
+      <ellipse cx="32" cy="58" rx="20" ry="3.5" fill="#152033" opacity="0.14" />
+      {/* soft pink aura */}
+      <ellipse cx="32" cy="38" rx="26" ry="22" fill="#F9A8D4" opacity="0.28" />
+      {/* body — frosted white crystal */}
       <path
-        d="M18 24 L32 10 L46 24 L42 50 L22 50 Z"
-        fill="#7C3AED"
+        d="M11 30 L14 52 L50 52 L53 30 Z"
+        fill="#E8EEF5"
+      />
+      <path d="M14 32 L17 50 L31 50 L31 32 Z" fill="#F8FAFC" />
+      <path d="M31 32 L31 50 L47 50 L50 32 Z" fill="#D7DEE8" />
+      {/* jagged crystal facets on body */}
+      <path d="M16 36 L20 34 L22 42 L17 44 Z" fill="#FFFFFF" opacity="0.75" />
+      <path d="M24 40 L28 37 L30 48 L25 48 Z" fill="#CBD5E1" opacity="0.7" />
+      <path d="M36 35 L42 33 L44 46 L37 47 Z" fill="#FFFFFF" opacity="0.55" />
+      <path d="M40 40 L48 38 L49 48 L42 49 Z" fill="#94A3B8" opacity="0.35" />
+      {/* lid */}
+      <path
+        d="M10 30 L14 18 L50 18 L54 30 Z"
+        fill="#F1F5F9"
+      />
+      <path d="M14 20 L17 28 L31 28 L31 20 Z" fill="#FFFFFF" />
+      <path d="M31 20 L31 28 L47 28 L50 20 Z" fill="#D0D7E2" />
+      {/* lid crystal chips */}
+      <path d="M18 22 L22 19 L24 26 L19 27 Z" fill="#E2E8F0" />
+      <path d="M40 21 L46 20 L47 27 L41 27 Z" fill="#FFFFFF" opacity="0.8" />
+      {/* pink seam glow under lid */}
+      <rect x="13" y="29" width="38" height="2.5" fill="#F472B6" opacity="0.85" />
+      <rect x="15" y="29.4" width="34" height="1.2" fill="#FBCFE8" opacity="0.9" />
+      {/* glowing magenta orb on lid */}
+      <circle cx="32" cy="16" r="7" fill="#FB7185" opacity="0.35" />
+      <circle cx="32" cy="16" r="5.2" fill="#EC4899" />
+      <circle cx="32" cy="16" r="3.4" fill="#F472B6" />
+      <circle cx="30.5" cy="14.6" r="1.4" fill="#FCE7F3" />
+      {/* dark hexagonal lock */}
+      <path
+        d="M32 34 L36 36.5 L36 41.5 L32 44 L28 41.5 L28 36.5 Z"
+        fill="#1E1B2E"
       />
       <path
-        d="M22 26 L32 14 L42 26 L38 46 L26 46 Z"
-        fill="#A78BFA"
+        d="M32 35.5 L34.5 37 L34.5 40.5 L32 42 L29.5 40.5 L29.5 37 Z"
+        fill="#312E45"
       />
-      <path d="M32 14 L42 26 L32 30 Z" fill="#DDD6FE" />
-      <path d="M32 14 L22 26 L32 30 Z" fill="#C4B5FD" />
-      <path d="M22 26 L32 30 L26 46 Z" fill="#8B5CF6" />
-      <path d="M42 26 L32 30 L38 46 Z" fill="#6D28D9" />
-      <path d="M26 46 L32 30 L38 46 Z" fill="#5B21B6" opacity="0.85" />
-      {/* lid facet highlight */}
-      <path d="M28 18 L32 12 L36 18 L32 22 Z" fill="#F5F3FF" opacity="0.9" />
-      {/* gold clasp */}
-      <rect x="28" y="36" width="8" height="10" rx="1.5" fill="#FBBF24" />
-      <circle cx="32" cy="40" r="2.2" fill="#67E8F9" />
-      <circle cx="32" cy="39.2" r="0.9" fill="#ECFEFF" />
+      <circle cx="32" cy="38.5" r="1.2" fill="#F472B6" opacity="0.7" />
       {/* sparkles */}
-      <circle cx="16" cy="20" r="1.4" fill="#ECFEFF" />
-      <circle cx="48" cy="18" r="1.8" fill="#F5F3FF" />
-      <circle cx="50" cy="34" r="1.1" fill="#A5F3FC" />
-      <circle cx="14" cy="38" r="1" fill="#DDD6FE" />
+      <circle cx="18" cy="14" r="1.1" fill="#FCE7F3" />
+      <circle cx="48" cy="15" r="1.3" fill="#FFFFFF" />
+      <circle cx="52" cy="34" r="1" fill="#F9A8D4" />
+      <circle cx="12" cy="40" r="0.9" fill="#E0F2FE" />
     </>
   );
 }

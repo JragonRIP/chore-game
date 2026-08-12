@@ -26,14 +26,12 @@ export function QuestBoard({
   state,
   onOpen,
   onStartDungeon,
-  idleStartedAt,
   onClaimIdle,
 }: {
   state: GameState;
   onOpen: (id: QuestId) => void;
   onStartDungeon: () => void;
-  idleStartedAt: number;
-  onClaimIdle: (gold: number, xp: number) => void;
+  onClaimIdle: () => void;
 }) {
   const [category, setCategory] = useState<(typeof QUEST_CATEGORIES)[number]>(
     "All Quests",
@@ -64,7 +62,7 @@ export function QuestBoard({
       <h2 className="font-display text-2xl text-ink">Quest Board</h2>
       <p className="mt-0.5 text-sm text-ink-soft">Pick a chore. Become a legend.</p>
 
-      <IdleBanner startedAt={idleStartedAt} onClaim={onClaimIdle} />
+      <IdleBanner claim={state.idleClaim} onClaim={onClaimIdle} />
 
       <div className="surface-strong mt-4 overflow-hidden p-4">
         <div className="flex items-start gap-3">
