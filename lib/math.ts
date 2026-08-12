@@ -26,6 +26,7 @@ import type {
   GameState,
   GearDef,
   GearId,
+  ChestDrop,
   LootEvent,
   PetDef,
   PetId,
@@ -37,6 +38,7 @@ import type {
   Rarity,
   VaultChest,
   XpBottleId,
+  AchievementId,
 } from "./types";
 
 export function todayKey(d = new Date()): string {
@@ -87,6 +89,10 @@ function normalizePetTreats(raw: unknown): Record<PetTreatId, number> {
   return next;
 }
 
+function asCount(n: unknown): number {
+  return typeof n === "number" && n > 0 ? Math.floor(n) : 0;
+}
+
 export function emptyEquipped(): EquippedMap {
   return {
     helmet: null,
@@ -127,6 +133,16 @@ export function createInitialState(): GameState {
     freeChestDate: null,
     xpBottles: emptyXpBottles(),
     petTreats: emptyPetTreats(),
+    streakDays: 0,
+    streakDate: null,
+    streakBest: 0,
+    questsCompleted: 0,
+    chestsOpened: 0,
+    salvageCount: 0,
+    storePurchases: 0,
+    giftsSent: 0,
+    goldPeak: 0,
+    claimedAchievements: [],
   };
 }
 
@@ -227,6 +243,20 @@ export function normalizeState(raw: unknown): GameState {
         : null,
     xpBottles: normalizeXpBottles(r.xpBottles),
     petTreats: normalizePetTreats(r.petTreats),
+    streakDays: asCount(r.streakDays),
+    streakDate: typeof r.streakDate === "string" ? r.streakDate : null,
+    streakBest: asCount(r.streakBest),
+    questsCompleted: asCount(r.questsCompleted),
+    chestsOpened: asCount(r.chestsOpened),
+    salvageCount: asCount(r.salvageCount),
+    storePurchases: asCount(r.storePurchases),
+    giftsSent: asCount(r.giftsSent),
+    goldPeak: Math.max(asCount(r.goldPeak), typeof r.gold === "number" ? r.gold : 0),
+    claimedAchievements: Array.isArray(r.claimedAchievements)
+      ? (r.claimedAchievements as string[]).filter(
+          (id): id is AchievementId => typeof id === "string",
+        )
+      : [],
   };
 
   const today = todayKey();
@@ -374,7 +404,14 @@ export function applyQuestRewards(
   }
 
   return {
-    state: { ...state, level, xp, gold, petProgress },
+    state: {
+      ...state,
+      level,
+      xp,
+      gold,
+      petProgress,
+      goldPeak: Math.max(state.goldPeak, gold),
+    },
     gainedXp,
     gainedCoins,
     levelsGained,
@@ -393,6 +430,7 @@ export function applyFlatRewards(
   level: number;
   xp: number;
   gold: number;
+  goldPeak: number;
   chests: VaultChest[];
   levelsGained: number[];
 } {
@@ -420,7 +458,14 @@ export function applyFlatRewards(
     });
   }
 
-  return { level, xp, gold, chests, levelsGained };
+  return {
+    level,
+    xp,
+    gold,
+    goldPeak: Math.max(state.goldPeak, gold),
+    chests,
+    levelsGained,
+  };
 }
 
 function pickWeighted<T extends { weight: number }>(items: T[]): T {
@@ -450,7 +495,17 @@ function rarityPool(chest: "normal" | "legendary"): Rarity {
   ]).rarity;
 }
 
-function rollGearLoot(owned: GearId[], rarity: Rarity): LootEvent {
+export function chestBonusCoins(
+  chest: "normal" | "legendary",
+  rarity: Rarity,
+): number {
+  const base = chest === "legendary" ? 50 : 15;
+  if (rarity === "relic") return base + 20;
+  if (rarity === "mythic") return base + 10;
+  return base;
+}
+
+function rollGearLoot(owned: GearId[], rarity: Rarity): ChestDrop {
   const candidates = ALL_GEAR.filter((g) => g.rarity === rarity);
   const pool = candidates.length
     ? candidates
@@ -467,7 +522,7 @@ function rollGearLoot(owned: GearId[], rarity: Rarity): LootEvent {
   return { kind: "gear", gearId: gear.id };
 }
 
-function rollPetLoot(ownedPets: PetId[], rarity: Rarity): LootEvent {
+function rollPetLoot(ownedPets: PetId[], rarity: Rarity): ChestDrop {
   const candidates = ALL_PETS.filter((p) => p.rarity === rarity);
   const pool = candidates.length
     ? candidates
@@ -485,6 +540,13 @@ function rollPetLoot(ownedPets: PetId[], rarity: Rarity): LootEvent {
   return { kind: "pet", petId: pet.id };
 }
 
+function dropRarity(drop: ChestDrop): Rarity {
+  if (drop.kind === "gear" || drop.kind === "duplicate") {
+    return GEAR_BY_ID[drop.gearId]?.rarity ?? "forged";
+  }
+  return PET_BY_ID[drop.petId]?.rarity ?? "forged";
+}
+
 export function rollChestLoot(
   ownedGear: GearId[],
   chest: "normal" | "legendary",
@@ -499,10 +561,14 @@ export function rollChestLoot(
       : PET_CHEST_CHANCE_NORMAL;
 
   // Gear is the default. Pets are an uncommon bonus roll only.
-  if (petsUnlocked && Math.random() < petChance) {
-    return rollPetLoot(ownedPets, rarity);
-  }
-  return rollGearLoot(ownedGear, rarity);
+  const drop =
+    petsUnlocked && Math.random() < petChance
+      ? rollPetLoot(ownedPets, rarity)
+      : rollGearLoot(ownedGear, rarity);
+  return {
+    ...drop,
+    bonusCoins: chestBonusCoins(chest, dropRarity(drop)),
+  } as LootEvent;
 }
 
 export function rarityRank(r: Rarity): number {

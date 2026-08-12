@@ -269,6 +269,29 @@ body {
   animation: pulse-soft 1.4s ease-in-out infinite;
 }
 
+.achievement-ready {
+  background: linear-gradient(135deg, #fff8e1 0%, #fde68a 55%, #fbbf24 100%);
+  border: 1px solid rgba(217, 119, 6, 0.45);
+  box-shadow:
+    0 0 0 1px rgba(251, 191, 36, 0.35),
+    0 0 18px rgba(251, 191, 36, 0.55);
+  animation: achievement-glow 1.6s ease-in-out infinite;
+}
+
+@keyframes achievement-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(251, 191, 36, 0.35),
+      0 0 14px rgba(251, 191, 36, 0.45);
+  }
+  50% {
+    box-shadow:
+      0 0 0 2px rgba(251, 191, 36, 0.6),
+      0 0 26px rgba(245, 158, 11, 0.75);
+  }
+}
+
 @keyframes shimmer {
   0% {
     background-position: 200% 0;

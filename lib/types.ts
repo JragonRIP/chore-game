@@ -21,6 +21,27 @@ export type PetSpecies = "lizard" | "wolf" | "lion" | "dragon";
 export type FamiliarId = "maple" | "caliper";
 export type XpBottleId = "xp-sip" | "xp-flask";
 export type PetTreatId = "treat-nibble" | "treat-feast";
+export type AchievementId =
+  | "first-quest"
+  | "quests-10"
+  | "quests-50"
+  | "quests-100"
+  | "streak-3"
+  | "streak-7"
+  | "streak-14"
+  | "first-chest"
+  | "chests-10"
+  | "first-gear"
+  | "full-set"
+  | "first-relic"
+  | "first-pet"
+  | "pet-level-5"
+  | "salvage-1"
+  | "level-5"
+  | "level-10"
+  | "gold-500"
+  | "store-buy"
+  | "gift-friend";
 
 export type QuestId = string;
 export type GearId = string;
@@ -99,7 +120,7 @@ export interface HeroProfile {
   avatar: AvatarId;
 }
 
-export type LootEvent =
+export type ChestDrop =
   | { kind: "gear"; gearId: GearId }
   | { kind: "duplicate"; gearId: GearId; coinsAwarded: number }
   | { kind: "pet"; petId: PetId }
@@ -109,6 +130,8 @@ export type LootEvent =
       coinsAwarded: number;
       xpAwarded: number;
     };
+
+export type LootEvent = ChestDrop & { bonusCoins: number };
 
 export interface ActiveQuest {
   questId: QuestId;
@@ -170,6 +193,19 @@ export interface GameState {
   xpBottles: Record<XpBottleId, number>;
   /** Owned pet treats waiting to be fed on the Pets tab. */
   petTreats: Record<PetTreatId, number>;
+  /** Consecutive days with at least one completed quest. */
+  streakDays: number;
+  /** Calendar day the streak last incremented. */
+  streakDate: string | null;
+  streakBest: number;
+  questsCompleted: number;
+  chestsOpened: number;
+  salvageCount: number;
+  storePurchases: number;
+  giftsSent: number;
+  /** Highest gold ever held (for achievements). */
+  goldPeak: number;
+  claimedAchievements: AchievementId[];
 }
 
 export type ScreenPhase = "story" | "create" | "play";

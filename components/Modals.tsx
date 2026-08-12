@@ -230,6 +230,11 @@ export function ChestOpenModal({
                 </div>
               </>
             )}
+            {loot.bonusCoins > 0 && (
+              <div className="mt-3 flex items-center justify-center gap-1.5 text-sm font-bold text-amber-800">
+                <GoldCoin size={16} />+{loot.bonusCoins} gold
+              </div>
+            )}
             <button
               type="button"
               onClick={onDismiss}

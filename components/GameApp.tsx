@@ -4,7 +4,9 @@ import { useMemo, useState } from "react";
 import { ActiveQuestSheet } from "@/components/ActiveQuestSheet";
 import { Armory } from "@/components/Armory";
 import { BottomNav } from "@/components/BottomNav";
+import { AchievementsPanel } from "@/components/AchievementsPanel";
 import { FriendsPanel } from "@/components/FriendsPanel";
+import { StreakModal } from "@/components/StreakModal";
 import { HeroCreate } from "@/components/HeroCreate";
 import { IntroStory } from "@/components/IntroStory";
 import {
@@ -22,12 +24,14 @@ import { StoreScreen } from "@/components/StoreScreen";
 import { TreasureVault } from "@/components/TreasureVault";
 import { useGameState } from "@/hooks/useGameState";
 import { useOnline } from "@/hooks/useOnline";
+import { unclaimedAchievementCount } from "@/lib/achievements";
 import type { QuestId } from "@/lib/types";
 
 export function GameApp() {
   const g = useGameState();
   const [openQuestId, setOpenQuestId] = useState<QuestId | null>(null);
   const [friendsOpen, setFriendsOpen] = useState(false);
+  const [achievementsOpen, setAchievementsOpen] = useState(false);
 
   const online = useOnline({
     state: g.state,
@@ -78,6 +82,8 @@ export function GameApp() {
         onLevelTap={g.onLevelBadgeTap}
         onFriends={() => setFriendsOpen(true)}
         friendsBadge={friendsBadge}
+        onAchievements={() => setAchievementsOpen(true)}
+        achievementsBadge={unclaimedAchievementCount(g.state)}
         onlineActive={Boolean(online.player)}
       />
 
@@ -159,13 +165,21 @@ export function GameApp() {
           />
         )}
 
-      {g.petsUnlockOpen && !g.celebration && !g.openingChest && (
+      {g.streakPopup && !g.celebration && !g.openingChest && (
+        <StreakModal data={g.streakPopup} onDismiss={g.dismissStreakPopup} />
+      )}
+
+      {g.petsUnlockOpen &&
+        !g.celebration &&
+        !g.openingChest &&
+        !g.streakPopup && (
         <PetsUnlockModal onDismiss={g.dismissPetsUnlock} />
       )}
 
       {g.familiarReveal &&
         !g.celebration &&
         !g.openingChest &&
+        !g.streakPopup &&
         !g.petsUnlockOpen && (
           <FamiliarRevealModal
             familiar={g.familiarReveal}
@@ -176,6 +190,7 @@ export function GameApp() {
       {g.dailyGift &&
         !g.celebration &&
         !g.openingChest &&
+        !g.streakPopup &&
         !g.petsUnlockOpen &&
         !g.familiarReveal && (
           <DailyChestGift onDismiss={g.dismissDailyGift} />
@@ -197,6 +212,14 @@ export function GameApp() {
         onClose={() => setFriendsOpen(false)}
         state={g.state}
         online={online}
+        onGiftSent={g.recordGiftSent}
+      />
+
+      <AchievementsPanel
+        open={achievementsOpen}
+        onClose={() => setAchievementsOpen(false)}
+        state={g.state}
+        onClaim={g.claimAchievement}
       />
     </div>
   );

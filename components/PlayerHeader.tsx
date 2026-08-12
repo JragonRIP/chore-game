@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { HeroSprite } from "@/components/HeroSprite";
 import { GoldCoin } from "@/components/GoldCoin";
+import { unclaimedAchievementCount } from "@/lib/achievements";
 import type { GameState } from "@/lib/types";
 
 export function PlayerHeader({
@@ -13,6 +14,8 @@ export function PlayerHeader({
   onLevelTap,
   onFriends,
   friendsBadge,
+  onAchievements,
+  achievementsBadge,
   onlineActive,
 }: {
   state: GameState;
@@ -22,10 +25,15 @@ export function PlayerHeader({
   onLevelTap: () => void;
   onFriends?: () => void;
   friendsBadge?: number;
+  onAchievements?: () => void;
+  achievementsBadge?: number;
   onlineActive?: boolean;
 }) {
   const hero = state.hero!;
   const pct = Math.min(100, Math.round((state.xp / xpNeeded) * 100));
+  const readyCount =
+    achievementsBadge ?? unclaimedAchievementCount(state);
+  const portraitBadge = (friendsBadge ?? 0) + readyCount;
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -60,9 +68,9 @@ export function PlayerHeader({
             {onlineActive && (
               <span className="absolute bottom-1 right-1 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
             )}
-            {(friendsBadge ?? 0) > 0 && (
+            {portraitBadge > 0 && (
               <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-coral px-1 text-[9px] font-bold text-white">
-                {friendsBadge}
+                {portraitBadge}
               </span>
             )}
           </button>
@@ -102,6 +110,26 @@ export function PlayerHeader({
                   )}
                 </button>
               )}
+              {onAchievements && (
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm font-semibold text-ink transition hover:bg-sky-1"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onAchievements();
+                  }}
+                >
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-100 text-amber-800">
+                    🏅
+                  </span>
+                  <span className="flex-1">Achievements</span>
+                  {readyCount > 0 && (
+                    <span className="rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                      {readyCount}
+                    </span>
+                  )}
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -119,6 +147,14 @@ export function PlayerHeader({
             >
               Lv {state.level}
             </button>
+            {state.streakDays > 0 && (
+              <span
+                className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800"
+                title="Quest streak"
+              >
+                🔥 {state.streakDays}
+              </span>
+            )}
             <div className="hide-scrollbar flex min-w-0 shrink items-center gap-1 overflow-x-auto">
               <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
                 +{xpPctBonus}% XP

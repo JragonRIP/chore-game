@@ -53,11 +53,13 @@ export function FriendsPanel({
   onClose,
   state,
   online,
+  onGiftSent,
 }: {
   open: boolean;
   onClose: () => void;
   state: GameState;
   online: OnlineApi;
+  onGiftSent?: () => void;
 }) {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [username, setUsername] = useState("");
@@ -410,6 +412,7 @@ export function FriendsPanel({
                                   void (async () => {
                                     try {
                                       await online.giftGold(f.playerId, amount);
+                                      onGiftSent?.();
                                       showToast(`Sent ${amount} gold!`);
                                     } catch {
                                       /* shown */
@@ -464,6 +467,7 @@ export function FriendsPanel({
                                         ...m,
                                         [f.playerId]: "",
                                       }));
+                                      onGiftSent?.();
                                       showToast(`Sent ${gear.name}!`);
                                     } catch {
                                       /* shown */
@@ -517,6 +521,7 @@ export function FriendsPanel({
                                         ...m,
                                         [f.playerId]: "",
                                       }));
+                                      onGiftSent?.();
                                       showToast(`Sent ${pet.name}!`);
                                     } catch {
                                       /* shown */
@@ -570,6 +575,7 @@ export function FriendsPanel({
                                         ...m,
                                         [f.playerId]: "",
                                       }));
+                                      onGiftSent?.();
                                       showToast("Chest sent!");
                                     } catch {
                                       /* shown */

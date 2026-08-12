@@ -30,7 +30,10 @@ import {
 import { PET_TREAT_BY_ID } from "@/lib/petTreats";
 import { getQuestById } from "@/lib/questResolve";
 import { loadGame, saveGame } from "@/lib/storage";
+import { nextStreakLegendaryAt, tickQuestStreak } from "@/lib/streaks";
+import { ACHIEVEMENT_BY_ID } from "@/lib/achievements";
 import type {
+  AchievementId,
   AvatarId,
   FamiliarId,
   GameState,
@@ -60,6 +63,12 @@ export interface Celebration {
   petLevels: number[];
 }
 
+export interface StreakPopup {
+  days: number;
+  awardedChest: boolean;
+  nextAt: number;
+}
+
 export function useGameState() {
   const [state, setState] = useState<GameState | null>(null);
   const [tab, setTab] = useState<TabId>("quest");
@@ -75,10 +84,12 @@ export function useGameState() {
   const [familiarReveal, setFamiliarReveal] = useState<FamiliarId | null>(
     null,
   );
+  const [streakPopup, setStreakPopup] = useState<StreakPopup | null>(null);
   const levelTaps = useRef(0);
   const saveReady = useRef(false);
   const dailyChecked = useRef(false);
   const pendingPetsUnlock = useRef(false);
+  const pendingStreak = useRef<StreakPopup | null>(null);
   const pendingChestLoot = useRef<LootEvent | null>(null);
 
   useEffect(() => {
@@ -181,17 +192,26 @@ export function useGameState() {
         quest.coins,
         quest.category,
       );
+      const streak = tickQuestStreak(rewarded.state);
+      const extraChests = streak.chest ? [streak.chest] : [];
       queueMicrotask(() => {
         setCelebration({
           xp: rewarded.gainedXp,
           coins: rewarded.gainedCoins,
           questName: quest.name,
           levels: rewarded.levelsGained,
-          chestsEarned: rewarded.chests.length,
+          chestsEarned: rewarded.chests.length + extraChests.length,
           equippedPetId: s.equippedPet,
           petXp: rewarded.petXpGained,
           petLevels: rewarded.petLevelsGained,
         });
+        if (streak.firstOfDay) {
+          pendingStreak.current = {
+            days: streak.streakDays,
+            awardedChest: Boolean(streak.chest),
+            nextAt: nextStreakLegendaryAt(streak.streakDays),
+          };
+        }
         if (unlockingPets) pendingPetsUnlock.current = true;
       });
       return {
@@ -203,7 +223,11 @@ export function useGameState() {
           ...s.questLastCompleted,
           [id]: Date.now(),
         },
-        vaultChests: [...rewarded.chests, ...s.vaultChests],
+        vaultChests: [...extraChests, ...rewarded.chests, ...s.vaultChests],
+        streakDays: streak.streakDays,
+        streakDate: streak.streakDate,
+        streakBest: streak.streakBest,
+        questsCompleted: s.questsCompleted + 1,
       };
     });
     return ok;
@@ -211,6 +235,19 @@ export function useGameState() {
 
   const dismissCelebration = useCallback(() => {
     setCelebration(null);
+    if (pendingStreak.current) {
+      setStreakPopup(pendingStreak.current);
+      pendingStreak.current = null;
+      return;
+    }
+    if (pendingPetsUnlock.current) {
+      pendingPetsUnlock.current = false;
+      setPetsUnlockOpen(true);
+    }
+  }, []);
+
+  const dismissStreakPopup = useCallback(() => {
+    setStreakPopup(null);
     if (pendingPetsUnlock.current) {
       pendingPetsUnlock.current = false;
       setPetsUnlockOpen(true);
@@ -263,27 +300,40 @@ export function useGameState() {
       });
 
       const withoutChest = s.vaultChests.filter((c) => c.id !== chest.id);
+      const bonusGold = event.bonusCoins;
 
       if (event.kind === "duplicate") {
+        const gold = s.gold + event.coinsAwarded + bonusGold;
         return {
           ...s,
-          gold: s.gold + event.coinsAwarded,
+          gold,
+          goldPeak: Math.max(s.goldPeak, gold),
           vaultChests: withoutChest,
+          chestsOpened: s.chestsOpened + 1,
         };
       }
       if (event.kind === "pet-duplicate") {
-        const flat = applyFlatRewards(s, event.xpAwarded, event.coinsAwarded);
+        const flat = applyFlatRewards(
+          s,
+          event.xpAwarded,
+          event.coinsAwarded + bonusGold,
+        );
         return {
           ...s,
           level: flat.level,
           xp: flat.xp,
           gold: flat.gold,
+          goldPeak: flat.goldPeak,
           vaultChests: [...flat.chests, ...withoutChest],
+          chestsOpened: s.chestsOpened + 1,
         };
       }
       if (event.kind === "pet") {
+        const gold = s.gold + bonusGold;
         return {
           ...s,
+          gold,
+          goldPeak: Math.max(s.goldPeak, gold),
           ownedPets: [...s.ownedPets, event.petId],
           petProgress: {
             ...s.petProgress,
@@ -291,13 +341,18 @@ export function useGameState() {
               s.petProgress[event.petId] ?? defaultPetProgress(),
           },
           vaultChests: withoutChest,
+          chestsOpened: s.chestsOpened + 1,
         };
       }
+      const gold = s.gold + bonusGold;
       return {
         ...s,
+        gold,
+        goldPeak: Math.max(s.goldPeak, gold),
         ownedGear: [...s.ownedGear, event.gearId],
         lootLog: [event.gearId, ...s.lootLog].slice(0, 40),
         vaultChests: withoutChest,
+        chestsOpened: s.chestsOpened + 1,
       };
     });
   }, [openingChest]);
@@ -323,6 +378,7 @@ export function useGameState() {
         ...s,
         gold: s.gold - def.price,
         vaultChests: [chest, ...s.vaultChests],
+        storePurchases: s.storePurchases + 1,
       };
     });
   }, []);
@@ -340,6 +396,7 @@ export function useGameState() {
           ...bag,
           [treatId]: (bag[treatId] ?? 0) + 1,
         },
+        storePurchases: s.storePurchases + 1,
       };
     });
   }, []);
@@ -381,6 +438,7 @@ export function useGameState() {
           ...s.xpBottles,
           [bottleId]: (s.xpBottles[bottleId] ?? 0) + 1,
         },
+        storePurchases: s.storePurchases + 1,
       };
     });
   }, []);
@@ -408,6 +466,7 @@ export function useGameState() {
         level: flat.level,
         xp: flat.xp,
         gold: flat.gold,
+        goldPeak: flat.goldPeak,
         vaultChests: [...flat.chests, ...s.vaultChests],
         xpBottles: {
           ...s.xpBottles,
@@ -429,6 +488,7 @@ export function useGameState() {
         gold: s.gold - gear.storePrice!,
         ownedGear: [...s.ownedGear, gearId],
         lootLog: [gearId, ...s.lootLog].slice(0, 40),
+        storePurchases: s.storePurchases + 1,
       };
     });
   }, []);
@@ -448,6 +508,7 @@ export function useGameState() {
           ...s.petProgress,
           [petId]: s.petProgress[petId] ?? defaultPetProgress(),
         },
+        storePurchases: s.storePurchases + 1,
       };
     });
   }, []);
@@ -497,8 +558,10 @@ export function useGameState() {
         level: flat.level,
         xp: flat.xp,
         gold: flat.gold,
+        goldPeak: flat.goldPeak,
         vaultChests: [...flat.chests, ...s.vaultChests],
         ownedGear: s.ownedGear.filter((id) => id !== gearId),
+        salvageCount: s.salvageCount + 1,
       };
     });
   }, []);
@@ -552,6 +615,30 @@ export function useGameState() {
     setFamiliarReveal(null);
   }, []);
 
+  const claimAchievement = useCallback((id: AchievementId) => {
+    const def = ACHIEVEMENT_BY_ID[id];
+    if (!def) return;
+    setState((s) => {
+      if (!s) return s;
+      if (s.claimedAchievements.includes(id)) return s;
+      if (!def.unlocked(s)) return s;
+      const flat = applyFlatRewards(s, def.xp, def.gold);
+      return {
+        ...s,
+        level: flat.level,
+        xp: flat.xp,
+        gold: flat.gold,
+        goldPeak: flat.goldPeak,
+        vaultChests: [...flat.chests, ...s.vaultChests],
+        claimedAchievements: [...s.claimedAchievements, id],
+      };
+    });
+  }, []);
+
+  const recordGiftSent = useCallback(() => {
+    setState((s) => (s ? { ...s, giftsSent: s.giftsSent + 1 } : s));
+  }, []);
+
   const parentGrant = useCallback((xpAmount: number, goldAmount: number) => {
     const xpAdd = Math.max(0, Math.floor(xpAmount));
     const goldAdd = Math.max(0, Math.floor(goldAmount));
@@ -564,6 +651,7 @@ export function useGameState() {
         level: flat.level,
         xp: flat.xp,
         gold: flat.gold,
+        goldPeak: flat.goldPeak,
         vaultChests: [...flat.chests, ...s.vaultChests],
       };
     });
@@ -622,7 +710,9 @@ export function useGameState() {
     setParentOpen(false);
     setPetsUnlockOpen(false);
     setFamiliarReveal(null);
+    setStreakPopup(null);
     pendingPetsUnlock.current = false;
+    pendingStreak.current = null;
     dailyChecked.current = false;
     saveGame(fresh);
   }, []);
@@ -646,6 +736,8 @@ export function useGameState() {
     dismissChest,
     dailyGift,
     dismissDailyGift,
+    streakPopup,
+    dismissStreakPopup,
     finishStory,
     createHero,
     startQuest,
@@ -660,6 +752,8 @@ export function useGameState() {
     equipGear,
     unequipSlot,
     salvageGear,
+    claimAchievement,
+    recordGiftSent,
     equipPet,
     unequipPet,
     renamePet,
