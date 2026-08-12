@@ -48,6 +48,23 @@ export const DUPLICATE_COINS: Record<Rarity, number> = {
   relic: 200,
 };
 
+/** Salvage pays more than a chest dupe, less than store prices. Relics cannot be salvaged. */
+export const SALVAGE_GOLD: Record<Rarity, number> = {
+  scrap: 12,
+  forged: 25,
+  enchanted: 55,
+  mythic: 120,
+  relic: 0,
+};
+
+export const SALVAGE_XP: Record<Rarity, number> = {
+  scrap: 15,
+  forged: 35,
+  enchanted: 70,
+  mythic: 140,
+  relic: 0,
+};
+
 export const GEAR_SETS: GearSetDef[] = [
   {
     id: "scrap",

@@ -6,7 +6,9 @@ import { PetIcon, PetSprite } from "@/components/PetIcon";
 import { PetTreatIcon } from "@/components/PetTreatIcon";
 import { RarityBadge } from "@/components/PixelGearIcon";
 import {
+  displayPetName,
   getPetProgress,
+  isMapleName,
   MAX_PET_LEVEL,
   PET_BY_ID,
   PET_TRAIT_LABELS,
@@ -21,11 +23,13 @@ export function PetsScreen({
   onEquip,
   onUnequip,
   onFeedTreat,
+  onRename,
 }: {
   state: GameState;
   onEquip: (id: PetId) => void;
   onUnequip: () => void;
   onFeedTreat: (treatId: PetTreatId, petId: PetId) => void;
+  onRename: (id: PetId, name: string) => void;
 }) {
   const hero = state.hero!;
   const equipped = state.equippedPet
@@ -53,6 +57,8 @@ export function PetsScreen({
   const [selectedTreat, setSelectedTreat] = useState<PetTreatId>(
     ownedTreats[0]?.id ?? "treat-nibble",
   );
+  const [renamingId, setRenamingId] = useState<PetId | null>(null);
+  const [renameDraft, setRenameDraft] = useState("");
   const selectedDef =
     STORE_PET_TREATS.find((t) => t.id === selectedTreat) ??
     ownedTreats[0] ??
@@ -113,14 +119,20 @@ export function PetsScreen({
           />
           {equipped && (
             <div className="absolute bottom-2 right-[12%] loot-pop">
-              <PetSprite species={equipped.species} size={72} />
+              <PetSprite
+                species={equipped.species}
+                maple={isMapleName(state.petNames?.[equipped.id])}
+                size={72}
+              />
             </div>
           )}
         </div>
         <p className="mt-3 font-display text-base text-ink">{hero.name}</p>
         {equipped && equippedProgress ? (
           <div className="mt-2 w-full max-w-xs text-center">
-            <p className="font-display text-sm text-teal-deep">{equipped.name}</p>
+            <p className="font-display text-sm text-teal-deep">
+              {displayPetName(equipped.name, state.petNames?.[equipped.id])}
+            </p>
             <div className="mt-1.5 flex flex-wrap items-center justify-center gap-1.5">
               <RarityBadge rarity={equipped.rarity} />
               <span className="rounded-full bg-teal/15 px-2.5 py-0.5 text-[10px] font-bold text-teal-deep">
@@ -226,11 +238,41 @@ export function PetsScreen({
           const mult = petLevelMultiplier(progress.level);
           return (
             <div key={pet.id} className="surface flex items-center gap-3 p-3">
-              <PetIcon pet={pet} size={52} />
+              <PetIcon
+                pet={pet}
+                maple={isMapleName(state.petNames?.[pet.id])}
+                size={52}
+              />
               <div className="min-w-0 flex-1">
-                <p className="truncate font-display text-sm text-ink">
-                  {pet.name}
-                </p>
+                {renamingId === pet.id ? (
+                  <form
+                    className="flex gap-1"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      onRename(pet.id, renameDraft);
+                      setRenamingId(null);
+                    }}
+                  >
+                    <input
+                      className="field min-h-9 flex-1 px-2 text-xs"
+                      maxLength={16}
+                      autoFocus
+                      value={renameDraft}
+                      onChange={(e) => setRenameDraft(e.target.value)}
+                      placeholder={pet.name}
+                    />
+                    <button
+                      type="submit"
+                      className="btn btn-primary min-h-9 px-2 text-[10px]"
+                    >
+                      Save
+                    </button>
+                  </form>
+                ) : (
+                  <p className="truncate font-display text-sm text-ink">
+                    {displayPetName(pet.name, state.petNames?.[pet.id])}
+                  </p>
+                )}
                 <div className="mt-1 flex flex-wrap items-center gap-1.5">
                   <RarityBadge rarity={pet.rarity} />
                   <span className="text-[10px] font-bold text-teal-deep">
@@ -265,6 +307,20 @@ export function PetsScreen({
                   }`}
                 >
                   {isEquipped ? "Unequip" : "Equip"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (renamingId === pet.id) {
+                      setRenamingId(null);
+                      return;
+                    }
+                    setRenamingId(pet.id);
+                    setRenameDraft(state.petNames?.[pet.id] ?? "");
+                  }}
+                  className="btn btn-ghost min-h-8 px-3 text-[10px]"
+                >
+                  {renamingId === pet.id ? "Cancel" : "Rename"}
                 </button>
                 {selectedDef &&
                   selectedCount > 0 &&

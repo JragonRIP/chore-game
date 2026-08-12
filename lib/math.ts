@@ -15,6 +15,7 @@ import {
   applyPetXpGain,
   computePetQuestExtras,
   getPetProgress,
+  normalizePetNames,
   petGainsXpFromQuest,
   petLevelMultiplier,
 } from "./pets";
@@ -113,6 +114,8 @@ export function createInitialState(): GameState {
     equippedPet: null,
     petsUnlocked: false,
     petProgress: {},
+    petNames: {},
+    mapleRevealSeen: false,
     questOverrides: {},
     activeQuests: [],
     completedToday: [],
@@ -185,6 +188,8 @@ export function normalizeState(raw: unknown): GameState {
     equippedPet,
     petsUnlocked: Boolean(r.petsUnlocked) || ownedPets.length > 0,
     petProgress,
+    petNames: normalizePetNames(r.petNames, ownedPets),
+    mapleRevealSeen: Boolean(r.mapleRevealSeen),
     questOverrides,
     activeQuests,
     completedToday: Array.isArray(r.completedToday)

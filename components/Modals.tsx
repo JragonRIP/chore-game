@@ -4,7 +4,7 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { GEAR_BY_ID } from "@/lib/gear";
 import { PET_BY_ID } from "@/lib/pets";
 import { ChestIcon } from "@/components/ChestIcon";
-import { PetIcon } from "@/components/PetIcon";
+import { PetIcon, PetSprite } from "@/components/PetIcon";
 import { GearIcon, RarityBadge } from "@/components/PixelGearIcon";
 import { GoldCoin } from "@/components/GoldCoin";
 import type { Celebration } from "@/hooks/useGameState";
@@ -238,6 +238,29 @@ export function ChestOpenModal({
             </button>
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+export function MapleRevealModal({ onDismiss }: { onDismiss: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/45 p-4 backdrop-blur-sm sm:items-center">
+      <div className="surface-strong w-full max-w-sm p-5 text-center rise-in">
+        <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-3xl bg-gradient-to-br from-amber-50 to-sky-2 loot-pop">
+          <PetSprite species="wolf" maple size={96} />
+        </div>
+        <h3 className="mt-4 font-display text-2xl text-ink">Maple?</h3>
+        <p className="mt-2 text-sm text-ink-soft">
+          Oh — you found a familiar friend.
+        </p>
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="btn btn-primary mt-5 w-full"
+        >
+          Hi Maple
+        </button>
       </div>
     </div>
   );

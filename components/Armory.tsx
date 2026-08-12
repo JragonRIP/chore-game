@@ -5,15 +5,18 @@ import {
   ALL_GEAR,
   GEAR_BY_ID,
   GEAR_SETS,
+  SALVAGE_GOLD,
+  SALVAGE_XP,
   SLOT_LABELS,
   SLOTS,
   getSetPieces,
 } from "@/lib/gear";
+import { GoldCoin } from "@/components/GoldCoin";
 import { HeroSprite } from "@/components/HeroSprite";
 import { PetIcon, PetSprite } from "@/components/PetIcon";
 import { GearIcon, RarityBadge } from "@/components/PixelGearIcon";
-import { PET_BY_ID } from "@/lib/pets";
-import type { GameState, GearId, Slot } from "@/lib/types";
+import { isMapleName, PET_BY_ID } from "@/lib/pets";
+import type { GameState, GearDef, GearId, Slot } from "@/lib/types";
 
 const LEFT_SLOTS: Slot[] = ["helmet", "chestplate", "leggings"];
 const RIGHT_SLOTS: Array<Slot | "pet"> = ["boots", "weapon", "pet"];
@@ -25,6 +28,7 @@ export function Armory({
   coinBonus,
   onEquip,
   onUnequip,
+  onSalvage,
 }: {
   state: GameState;
   activeSetId: string | null;
@@ -32,8 +36,10 @@ export function Armory({
   coinBonus: number;
   onEquip: (id: GearId) => void;
   onUnequip: (slot: Slot) => void;
+  onSalvage: (id: GearId) => void;
 }) {
   const [slotFilter, setSlotFilter] = useState<Slot | "all">("all");
+  const [pendingSalvage, setPendingSalvage] = useState<GearDef | null>(null);
   const hero = state.hero!;
 
   const owned = useMemo(
@@ -58,7 +64,11 @@ export function Armory({
           title="Equip pets on the Pets tab"
         >
           {equippedPet ? (
-            <PetIcon pet={equippedPet} size={40} />
+            <PetIcon
+              pet={equippedPet}
+              maple={isMapleName(state.petNames?.[equippedPet.id])}
+              size={40}
+            />
           ) : (
             <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-dashed border-ink/25 text-xs text-ink/40">
               {state.petsUnlocked ? "—" : "?"}
@@ -110,7 +120,11 @@ export function Armory({
             />
             {equippedPet && (
               <div className="absolute bottom-1 right-1">
-                <PetSprite species={equippedPet.species} size={56} />
+                <PetSprite
+                  species={equippedPet.species}
+                  maple={isMapleName(state.petNames?.[equippedPet.id])}
+                  size={56}
+                />
               </div>
             )}
           </div>
@@ -138,6 +152,10 @@ export function Armory({
       </div>
 
       <h3 className="mt-5 font-display text-lg text-ink">Your Gear</h3>
+      <p className="mt-0.5 text-xs text-ink-soft">
+        Unequip a piece to salvage it into gold and XP. Relics can&apos;t be
+        salvaged.
+      </p>
       <div className="hide-scrollbar mt-2 flex gap-2 overflow-x-auto pb-1">
         <button
           type="button"
@@ -178,15 +196,34 @@ export function Armory({
                   </span>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => (equipped ? onUnequip(g.slot) : onEquip(g.id))}
-                className={`btn min-h-10 px-3 text-xs ${
-                  equipped ? "btn-ghost" : "btn-primary"
-                }`}
-              >
-                {equipped ? "Unequip" : "Equip"}
-              </button>
+              <div className="flex shrink-0 flex-col gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => (equipped ? onUnequip(g.slot) : onEquip(g.id))}
+                  className={`btn min-h-10 px-3 text-xs ${
+                    equipped ? "btn-ghost" : "btn-primary"
+                  }`}
+                >
+                  {equipped ? "Unequip" : "Equip"}
+                </button>
+                {g.rarity === "relic" ? (
+                  <p className="text-center text-[10px] font-semibold text-ink-soft">
+                    Relic
+                  </p>
+                ) : equipped ? (
+                  <p className="text-center text-[10px] font-semibold text-ink-soft">
+                    Unequip to salvage
+                  </p>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setPendingSalvage(g)}
+                    className="btn btn-ghost min-h-10 px-3 text-xs text-amber-800"
+                  >
+                    Salvage
+                  </button>
+                )}
+              </div>
             </div>
           );
         })}
@@ -224,6 +261,46 @@ export function Armory({
       <p className="mt-4 text-center text-xs text-ink-soft">
         Catalog: {ALL_GEAR.length} unique pieces
       </p>
+
+      {pendingSalvage && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-4 backdrop-blur-sm sm:items-center">
+          <div className="surface-strong w-full max-w-sm p-5 text-center rise-in">
+            <GearIcon gear={pendingSalvage} size={64} />
+            <h3 className="mt-3 font-display text-xl text-ink">
+              Salvage {pendingSalvage.name}?
+            </h3>
+            <p className="mt-2 text-sm text-ink-soft">
+              This piece is gone for good. You&apos;ll get gold and XP.
+            </p>
+            <p className="mt-3 inline-flex items-center justify-center gap-2 text-sm font-bold text-amber-800">
+              <GoldCoin size={16} />
+              {SALVAGE_GOLD[pendingSalvage.rarity]}
+              <span className="text-emerald-700">
+                +{SALVAGE_XP[pendingSalvage.rarity]} XP
+              </span>
+            </p>
+            <div className="mt-5 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setPendingSalvage(null)}
+                className="btn btn-ghost min-h-11 flex-1"
+              >
+                Keep it
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onSalvage(pendingSalvage.id);
+                  setPendingSalvage(null);
+                }}
+                className="btn btn-primary min-h-11 flex-1"
+              >
+                Salvage
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

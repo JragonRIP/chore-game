@@ -6,3 +6,5 @@ export const PET_IMAGES: Record<PetSpecies, string> = {
   lion: "/pets/lion.png",
   dragon: "/pets/dragon.png",
 };
+
+export const MAPLE_PET_IMAGE = "/pets/maple.png";

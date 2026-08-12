@@ -273,3 +273,31 @@ export function applyPetXpGain(
     xpGained: gain,
   };
 }
+
+export function isMapleName(name: string | null | undefined): boolean {
+  return (name ?? "").trim().toLowerCase() === "maple";
+}
+
+export function displayPetName(
+  catalogName: string,
+  nickname?: string | null,
+): string {
+  const n = nickname?.trim();
+  return n ? n : catalogName;
+}
+
+export function normalizePetNames(
+  raw: unknown,
+  ownedPets: PetId[],
+): Record<string, string> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const rec = raw as Record<string, unknown>;
+  const next: Record<string, string> = {};
+  for (const id of ownedPets) {
+    const n = rec[id];
+    if (typeof n === "string" && n.trim()) {
+      next[id] = n.trim().slice(0, 16);
+    }
+  }
+  return next;
+}

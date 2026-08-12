@@ -151,6 +151,10 @@ export interface GameState {
   petsUnlocked: boolean;
   /** Per owned pet level/xp. Missing entries default to level 1. */
   petProgress: Record<string, PetProgress>;
+  /** Optional nicknames for owned pets. */
+  petNames: Record<string, string>;
+  /** Shown the Maple familiar-friend popup once. */
+  mapleRevealSeen: boolean;
   /** Parent edits to catalog quests. */
   questOverrides: Record<string, QuestOverride>;
   activeQuests: ActiveQuest[];

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { GEAR_BY_ID, STORE_CHESTS } from "@/lib/gear";
+import { GEAR_BY_ID, SALVAGE_GOLD, SALVAGE_XP, STORE_CHESTS } from "@/lib/gear";
 import { XP_BOTTLE_BY_ID } from "@/lib/xpBottles";
 import {
   applyFlatRewards,
@@ -23,6 +23,7 @@ import {
   applyPetXpGain,
   defaultPetProgress,
   getPetProgress,
+  isMapleName,
   MAX_PET_LEVEL,
   PET_BY_ID,
 } from "@/lib/pets";
@@ -70,6 +71,7 @@ export function useGameState() {
   const [dailyGift, setDailyGift] = useState<VaultChest | null>(null);
   const [parentOpen, setParentOpen] = useState(false);
   const [petsUnlockOpen, setPetsUnlockOpen] = useState(false);
+  const [mapleRevealOpen, setMapleRevealOpen] = useState(false);
   const levelTaps = useRef(0);
   const saveReady = useRef(false);
   const dailyChecked = useRef(false);
@@ -465,6 +467,39 @@ export function useGameState() {
     );
   }, []);
 
+  const salvageGear = useCallback((gearId: GearId) => {
+    const gear = GEAR_BY_ID[gearId];
+    if (!gear || gear.rarity === "relic") return;
+    const goldAdd = SALVAGE_GOLD[gear.rarity];
+    const xpAdd = SALVAGE_XP[gear.rarity];
+    if (goldAdd <= 0 && xpAdd <= 0) return;
+    setState((s) => {
+      if (!s || !s.ownedGear.includes(gearId)) return s;
+      if (s.equipped[gear.slot] === gearId) return s;
+      const flat = applyFlatRewards(s, xpAdd, goldAdd);
+      queueMicrotask(() => {
+        setCelebration({
+          xp: xpAdd,
+          coins: goldAdd,
+          questName: `Salvaged ${gear.name}`,
+          levels: flat.levelsGained,
+          chestsEarned: flat.chests.length,
+          equippedPetId: s.equippedPet,
+          petXp: 0,
+          petLevels: [],
+        });
+      });
+      return {
+        ...s,
+        level: flat.level,
+        xp: flat.xp,
+        gold: flat.gold,
+        vaultChests: [...flat.chests, ...s.vaultChests],
+        ownedGear: s.ownedGear.filter((id) => id !== gearId),
+      };
+    });
+  }, []);
+
   const equipPet = useCallback((petId: PetId) => {
     setState((s) => {
       if (!s || !s.petsUnlocked || !s.ownedPets.includes(petId)) return s;
@@ -481,6 +516,32 @@ export function useGameState() {
 
   const unequipPet = useCallback(() => {
     setState((s) => (s ? { ...s, equippedPet: null } : s));
+  }, []);
+
+  const renamePet = useCallback((petId: PetId, rawName: string) => {
+    setState((s) => {
+      if (!s || !s.ownedPets.includes(petId)) return s;
+      const trimmed = rawName.trim().slice(0, 16);
+      const names = { ...(s.petNames ?? {}) };
+      if (!trimmed) {
+        delete names[petId];
+      } else {
+        names[petId] = trimmed;
+      }
+      const revealing = isMapleName(trimmed) && !s.mapleRevealSeen;
+      if (revealing) {
+        queueMicrotask(() => setMapleRevealOpen(true));
+      }
+      return {
+        ...s,
+        petNames: names,
+        mapleRevealSeen: s.mapleRevealSeen || revealing,
+      };
+    });
+  }, []);
+
+  const dismissMapleReveal = useCallback(() => {
+    setMapleRevealOpen(false);
   }, []);
 
   const parentGrant = useCallback((xpAmount: number, goldAmount: number) => {
@@ -552,6 +613,7 @@ export function useGameState() {
     setDailyGift(null);
     setParentOpen(false);
     setPetsUnlockOpen(false);
+    setMapleRevealOpen(false);
     pendingPetsUnlock.current = false;
     dailyChecked.current = false;
     saveGame(fresh);
@@ -589,8 +651,12 @@ export function useGameState() {
     buyPet,
     equipGear,
     unequipSlot,
+    salvageGear,
     equipPet,
     unequipPet,
+    renamePet,
+    mapleRevealOpen,
+    dismissMapleReveal,
     parentGrant,
     parentForceUnlockPets,
     parentUpdateQuest,

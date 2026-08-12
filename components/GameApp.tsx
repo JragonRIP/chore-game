@@ -11,6 +11,7 @@ import {
   CelebrationModal,
   ChestOpenModal,
   DailyChestGift,
+  MapleRevealModal,
   ParentPanel,
   PetsUnlockModal,
 } from "@/components/Modals";
@@ -104,6 +105,7 @@ export function GameApp() {
             coinBonus={g.bonuses.coins}
             onEquip={g.equipGear}
             onUnequip={g.unequipSlot}
+            onSalvage={g.salvageGear}
           />
         )}
         {g.tab === "pets" && (
@@ -112,6 +114,7 @@ export function GameApp() {
             onEquip={g.equipPet}
             onUnequip={g.unequipPet}
             onFeedTreat={g.feedPetTreat}
+            onRename={g.renamePet}
           />
         )}
         {g.tab === "store" && (
@@ -161,10 +164,18 @@ export function GameApp() {
         <PetsUnlockModal onDismiss={g.dismissPetsUnlock} />
       )}
 
-      {g.dailyGift &&
+      {g.mapleRevealOpen &&
         !g.celebration &&
         !g.openingChest &&
         !g.petsUnlockOpen && (
+          <MapleRevealModal onDismiss={g.dismissMapleReveal} />
+        )}
+
+      {g.dailyGift &&
+        !g.celebration &&
+        !g.openingChest &&
+        !g.petsUnlockOpen &&
+        !g.mapleRevealOpen && (
           <DailyChestGift onDismiss={g.dismissDailyGift} />
         )}
 
