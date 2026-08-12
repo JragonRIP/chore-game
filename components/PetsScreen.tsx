@@ -21,6 +21,7 @@ import {
   petXpToNextLevel,
 } from "@/lib/pets";
 import { STORE_PET_TREATS } from "@/lib/petTreats";
+import { playClick } from "@/lib/sounds";
 import type { GameState, PetId, PetTreatId } from "@/lib/types";
 
 export function PetsScreen({
@@ -203,7 +204,10 @@ export function PetsScreen({
             {canEvolveEquipped && (
               <button
                 type="button"
-                onClick={() => onEvolve(equipped.id)}
+                onClick={() => {
+                  playClick();
+                  onEvolve(equipped.id);
+                }}
                 className="btn btn-secondary mt-3 min-h-10 w-full text-xs"
               >
                 Evolve →{" "}
@@ -368,7 +372,10 @@ export function PetsScreen({
                 {readyEvolve && nextStage && (
                   <button
                     type="button"
-                    onClick={() => onEvolve(pet.id)}
+                    onClick={() => {
+                      playClick();
+                      onEvolve(pet.id);
+                    }}
                     className="btn btn-secondary min-h-9 px-3 text-[10px]"
                   >
                     Evolve

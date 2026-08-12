@@ -4,6 +4,19 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GEAR_BY_ID, SALVAGE_GOLD, SALVAGE_XP, STORE_CHESTS } from "@/lib/gear";
 import { XP_BOTTLE_BY_ID } from "@/lib/xpBottles";
 import {
+  canStartDungeon,
+  DUNGEON_COST,
+  makeCrystalChest,
+  pickDungeonQuests,
+} from "@/lib/dungeon";
+import {
+  ENCOUNTER_CHANCE,
+  rollEncounter,
+  rollEncounterReward,
+  type EncounterDef,
+  type EncounterReward,
+} from "@/lib/encounters";
+import {
   applyFlatRewards,
   applyQuestRewards,
   canCompleteQuest,
@@ -34,6 +47,7 @@ import {
 } from "@/lib/pets";
 import { PET_TREAT_BY_ID } from "@/lib/petTreats";
 import { getQuestById } from "@/lib/questResolve";
+import { playLevelUp } from "@/lib/sounds";
 import { loadGame, saveGame } from "@/lib/storage";
 import { nextStreakLegendaryAt, tickQuestStreak } from "@/lib/streaks";
 import { ACHIEVEMENT_BY_ID } from "@/lib/achievements";
@@ -45,6 +59,7 @@ import type {
   GearId,
   LootEvent,
   PetId,
+  PetStage,
   PetTreatId,
   QuestId,
   QuestOverride,
@@ -74,6 +89,13 @@ export interface StreakPopup {
   nextAt: number;
 }
 
+export interface EvolveAnim {
+  petId: PetId;
+  fromStage: PetStage;
+  toStage: PetStage;
+  nickname?: string;
+}
+
 export function useGameState() {
   const [state, setState] = useState<GameState | null>(null);
   const [tab, setTab] = useState<TabId>("quest");
@@ -93,6 +115,11 @@ export function useGameState() {
     null,
   );
   const [streakPopup, setStreakPopup] = useState<StreakPopup | null>(null);
+  const [encounter, setEncounter] = useState<EncounterDef | null>(null);
+  const [encounterRewardFlash, setEncounterRewardFlash] =
+    useState<EncounterReward | null>(null);
+  const [evolveAnim, setEvolveAnim] = useState<EvolveAnim | null>(null);
+  const [idleStartedAt, setIdleStartedAt] = useState(() => Date.now());
   const levelTaps = useRef(0);
   const saveReady = useRef(false);
   const dailyChecked = useRef(false);
@@ -100,8 +127,14 @@ export function useGameState() {
   const pendingStreak = useRef<StreakPopup | null>(null);
   const pendingChestLoot = useRef<LootEvent | null>(null);
   const pendingEvolveHints = useRef<Array<"adult" | "battle">>([]);
+  const pendingEncounter = useRef<EncounterDef | null>(null);
 
   const flushPendingModals = useCallback(() => {
+    if (pendingEncounter.current) {
+      setEncounter(pendingEncounter.current);
+      pendingEncounter.current = null;
+      return;
+    }
     if (pendingStreak.current) {
       setStreakPopup(pendingStreak.current);
       pendingStreak.current = null;
@@ -238,13 +271,35 @@ export function useGameState() {
         rewarded.petLevelsGained,
         s.evolveHintSeen,
       );
+
+      let activeDungeon = s.activeDungeon;
+      let dungeonChests: VaultChest[] = [];
+      if (
+        activeDungeon &&
+        activeDungeon.questIds.includes(id) &&
+        !activeDungeon.clearedIds.includes(id)
+      ) {
+        const clearedIds = [...activeDungeon.clearedIds, id];
+        if (clearedIds.length >= activeDungeon.questIds.length) {
+          dungeonChests = [
+            makeCrystalChest("Crystal Dungeon clear"),
+          ];
+          activeDungeon = null;
+        } else {
+          activeDungeon = { ...activeDungeon, clearedIds };
+        }
+      }
+
       queueMicrotask(() => {
         setCelebration({
           xp: rewarded.gainedXp,
           coins: rewarded.gainedCoins,
           questName: quest.name,
           levels: rewarded.levelsGained,
-          chestsEarned: rewarded.chests.length + extraChests.length,
+          chestsEarned:
+            rewarded.chests.length +
+            extraChests.length +
+            dungeonChests.length,
           equippedPetId: s.equippedPet,
           petXp: rewarded.petXpGained,
           petLevels: rewarded.petLevelsGained,
@@ -263,6 +318,9 @@ export function useGameState() {
             ...evolveHints,
           ];
         }
+        if (Math.random() < ENCOUNTER_CHANCE) {
+          pendingEncounter.current = rollEncounter();
+        }
       });
       return {
         ...rewarded.state,
@@ -273,7 +331,13 @@ export function useGameState() {
           ...s.questLastCompleted,
           [id]: Date.now(),
         },
-        vaultChests: [...extraChests, ...rewarded.chests, ...s.vaultChests],
+        vaultChests: [
+          ...dungeonChests,
+          ...extraChests,
+          ...rewarded.chests,
+          ...s.vaultChests,
+        ],
+        activeDungeon,
         streakDays: streak.streakDays,
         streakDate: streak.streakDate,
         streakBest: streak.streakBest,
@@ -291,6 +355,81 @@ export function useGameState() {
       };
     });
     return ok;
+  }, []);
+
+  const startDungeon = useCallback(() => {
+    setState((s) => {
+      if (!s || !canStartDungeon(s)) return s;
+      const questIds = pickDungeonQuests(s);
+      if (questIds.length < 3) return s;
+      return {
+        ...s,
+        gold: s.gold - DUNGEON_COST,
+        dungeonDate: todayKey(),
+        activeDungeon: { questIds, clearedIds: [] },
+      };
+    });
+  }, []);
+
+  const resolveEncounter = useCallback(
+    (won: boolean) => {
+      const enc = encounter;
+      setEncounter(null);
+      if (!won || !enc) {
+        flushPendingModals();
+        return;
+      }
+      const reward = rollEncounterReward(enc.id);
+      setState((s) => {
+        if (!s) return s;
+        const flat = applyFlatRewards(s, reward.xp, reward.gold);
+        let ownedGear = s.ownedGear;
+        let lootLog = s.lootLog;
+        let vaultChests = [...flat.chests, ...s.vaultChests];
+        if (reward.kind === "gear" && !ownedGear.includes(reward.gearId)) {
+          ownedGear = [...ownedGear, reward.gearId];
+          lootLog = [reward.gearId, ...lootLog].slice(0, 40);
+        }
+        if (reward.kind === "chest") {
+          vaultChests = [reward.chest, ...vaultChests];
+        }
+        return {
+          ...s,
+          level: flat.level,
+          xp: flat.xp,
+          gold: flat.gold,
+          goldPeak: flat.goldPeak,
+          ownedGear,
+          lootLog,
+          vaultChests,
+        };
+      });
+      setEncounterRewardFlash(reward);
+      flushPendingModals();
+    },
+    [encounter, flushPendingModals],
+  );
+
+  const dismissEncounterReward = useCallback(() => {
+    setEncounterRewardFlash(null);
+  }, []);
+
+  const claimIdle = useCallback((gold: number, xp: number) => {
+    if (gold <= 0 && xp <= 0) return;
+    setState((s) => {
+      if (!s) return s;
+      const flat = applyFlatRewards(s, xp, gold);
+      if (flat.levelsGained.length) playLevelUp();
+      return {
+        ...s,
+        level: flat.level,
+        xp: flat.xp,
+        gold: flat.gold,
+        goldPeak: flat.goldPeak,
+        vaultChests: [...flat.chests, ...s.vaultChests],
+      };
+    });
+    setIdleStartedAt(Date.now());
   }, []);
 
   const dismissCelebration = useCallback(() => {
@@ -729,6 +868,14 @@ export function useGameState() {
       if (!canEvolvePet(current, stones)) return s;
       const next = nextPetStage(current.stage);
       if (!next) return s;
+      queueMicrotask(() => {
+        setEvolveAnim({
+          petId,
+          fromStage: current.stage,
+          toStage: next,
+          nickname: s.petNames?.[petId],
+        });
+      });
       return {
         ...s,
         evolutionStones: stones - 1,
@@ -738,6 +885,10 @@ export function useGameState() {
         },
       };
     });
+  }, []);
+
+  const dismissEvolveAnim = useCallback(() => {
+    setEvolveAnim(null);
   }, []);
 
   const claimAchievement = useCallback((id: AchievementId) => {
@@ -837,9 +988,14 @@ export function useGameState() {
     setFamiliarReveal(null);
     setEvolveHint(null);
     setStreakPopup(null);
+    setEncounter(null);
+    setEncounterRewardFlash(null);
+    setEvolveAnim(null);
+    setIdleStartedAt(Date.now());
     pendingPetsUnlock.current = false;
     pendingStreak.current = null;
     pendingEvolveHints.current = [];
+    pendingEncounter.current = null;
     dailyChecked.current = false;
     saveGame(fresh);
   }, []);
@@ -869,6 +1025,13 @@ export function useGameState() {
     createHero,
     startQuest,
     completeQuest,
+    startDungeon,
+    encounter,
+    resolveEncounter,
+    encounterRewardFlash,
+    dismissEncounterReward,
+    idleStartedAt,
+    claimIdle,
     buyChest,
     buyXpBottle,
     useXpBottle,
@@ -886,6 +1049,8 @@ export function useGameState() {
     unequipPet,
     renamePet,
     evolvePet,
+    evolveAnim,
+    dismissEvolveAnim,
     familiarReveal,
     dismissFamiliarReveal,
     evolveHint,

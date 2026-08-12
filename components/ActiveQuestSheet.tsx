@@ -13,6 +13,7 @@ import {
   questMaxPerDay,
   questRemainingMs,
 } from "@/lib/math";
+import { playClick } from "@/lib/sounds";
 import type { ActiveQuest, GameState, QuestId } from "@/lib/types";
 
 export function ActiveQuestSheet({
@@ -140,7 +141,10 @@ export function ActiveQuestSheet({
                 <button
                   type="button"
                   disabled={!ready}
-                  onClick={() => onComplete(quest.id)}
+                  onClick={() => {
+                    playClick();
+                    onComplete(quest.id);
+                  }}
                   className="btn btn-secondary w-full text-base"
                 >
                   {ready
@@ -149,7 +153,10 @@ export function ActiveQuestSheet({
                 </button>
                 <button
                   type="button"
-                  onClick={onClose}
+                  onClick={() => {
+                    playClick();
+                    onClose();
+                  }}
                   className="btn btn-ghost w-full text-sm"
                 >
                   Keep Going — Close Card
@@ -169,7 +176,10 @@ export function ActiveQuestSheet({
               <button
                 type="button"
                 disabled={!canStart}
-                onClick={() => onStart(quest.id)}
+                onClick={() => {
+                  playClick();
+                  onStart(quest.id);
+                }}
                 className="btn btn-primary w-full text-base"
               >
                 Start Chore
@@ -178,7 +188,10 @@ export function ActiveQuestSheet({
             {!started && (
               <button
                 type="button"
-                onClick={onClose}
+                onClick={() => {
+                  playClick();
+                  onClose();
+                }}
                 className="btn btn-ghost w-full text-sm"
               >
                 Close

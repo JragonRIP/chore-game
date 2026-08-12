@@ -30,7 +30,12 @@ function giftLabel(g: {
   if (g.gift_type === "pet") {
     return PET_BY_ID[g.pet_id ?? ""]?.name ?? "Pet";
   }
-  const t = g.chest_json?.type === "legendary" ? "Legendary" : "Normal";
+  const t =
+    g.chest_json?.type === "crystal"
+      ? "Crystal"
+      : g.chest_json?.type === "legendary"
+        ? "Legendary"
+        : "Normal";
   return `${t} chest`;
 }
 
@@ -48,7 +53,12 @@ function claimToast(result: ClaimGiftResult): string {
   if (result.kind === "pet-dupe") {
     return `Already owned — +${result.gold} gold!`;
   }
-  const t = result.chest.type === "legendary" ? "Legendary" : "Normal";
+  const t =
+    result.chest.type === "crystal"
+      ? "Crystal"
+      : result.chest.type === "legendary"
+        ? "Legendary"
+        : "Normal";
   return `${t} chest added to vault!`;
 }
 
@@ -602,9 +612,11 @@ export function FriendsPanel({
                                 <option value="">Pick chest…</option>
                                 {state.vaultChests.map((c) => (
                                   <option key={c.id} value={c.id}>
-                                    {c.type === "legendary"
-                                      ? "Legendary"
-                                      : "Normal"}{" "}
+                                    {c.type === "crystal"
+                                      ? "Crystal"
+                                      : c.type === "legendary"
+                                        ? "Legendary"
+                                        : "Normal"}{" "}
                                     — {c.reason}
                                   </option>
                                 ))}

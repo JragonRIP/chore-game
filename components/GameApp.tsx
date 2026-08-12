@@ -19,6 +19,11 @@ import {
   ParentPanel,
   PetsUnlockModal,
 } from "@/components/Modals";
+import {
+  EncounterModal,
+  EncounterRewardToast,
+} from "@/components/EncounterModal";
+import { EvolveAnimModal } from "@/components/EvolveAnimModal";
 import { PetsScreen } from "@/components/PetsScreen";
 import { PlayerHeader } from "@/components/PlayerHeader";
 import { QuestBoard } from "@/components/QuestBoard";
@@ -27,6 +32,7 @@ import { TreasureVault } from "@/components/TreasureVault";
 import { useGameState } from "@/hooks/useGameState";
 import { useOnline } from "@/hooks/useOnline";
 import { unclaimedAchievementCount } from "@/lib/achievements";
+import { playClick } from "@/lib/sounds";
 import type { QuestId } from "@/lib/types";
 
 export function GameApp() {
@@ -96,12 +102,18 @@ export function GameApp() {
           <QuestBoard
             state={g.state}
             onOpen={handleOpen}
+            onStartDungeon={g.startDungeon}
+            idleStartedAt={g.idleStartedAt}
+            onClaimIdle={g.claimIdle}
           />
         )}
         {g.tab === "vault" && (
           <TreasureVault
             state={g.state}
-            onOpenChest={g.beginOpenChest}
+            onOpenChest={(chest) => {
+              playClick();
+              g.beginOpenChest(chest);
+            }}
             onUseXpBottle={g.useXpBottle}
           />
         )}
@@ -139,7 +151,13 @@ export function GameApp() {
         )}
       </main>
 
-      <BottomNav tab={g.tab} onChange={g.setTab} />
+      <BottomNav
+        tab={g.tab}
+        onChange={(t) => {
+          playClick();
+          g.setTab(t);
+        }}
+      />
 
       {openQuestId && (
         <ActiveQuestSheet
@@ -159,9 +177,35 @@ export function GameApp() {
         />
       )}
 
+      {g.encounter && !g.celebration && (
+        <EncounterModal
+          encounter={g.encounter}
+          onResolve={g.resolveEncounter}
+        />
+      )}
+
+      {g.encounterRewardFlash && !g.encounter && (
+        <EncounterRewardToast
+          reward={g.encounterRewardFlash}
+          onDismiss={g.dismissEncounterReward}
+        />
+      )}
+
+      {g.evolveAnim && !g.celebration && !g.encounter && (
+        <EvolveAnimModal
+          petId={g.evolveAnim.petId}
+          fromStage={g.evolveAnim.fromStage}
+          toStage={g.evolveAnim.toStage}
+          nickname={g.evolveAnim.nickname}
+          onDismiss={g.dismissEvolveAnim}
+        />
+      )}
+
       {g.openingChest &&
         (g.chestPhase === "opening" || g.chestPhase === "reveal") &&
-        !g.celebration && (
+        !g.celebration &&
+        !g.encounter &&
+        !g.evolveAnim && (
           <ChestOpenModal
             chest={g.openingChest}
             phase={g.chestPhase}
@@ -171,22 +215,30 @@ export function GameApp() {
           />
         )}
 
-      {g.streakPopup && !g.celebration && !g.openingChest && (
+      {g.streakPopup &&
+        !g.celebration &&
+        !g.encounter &&
+        !g.openingChest &&
+        !g.evolveAnim && (
         <StreakModal data={g.streakPopup} onDismiss={g.dismissStreakPopup} />
       )}
 
       {g.petsUnlockOpen &&
         !g.celebration &&
+        !g.encounter &&
         !g.openingChest &&
-        !g.streakPopup && (
+        !g.streakPopup &&
+        !g.evolveAnim && (
         <PetsUnlockModal onDismiss={g.dismissPetsUnlock} />
       )}
 
       {g.familiarReveal &&
         !g.celebration &&
+        !g.encounter &&
         !g.openingChest &&
         !g.streakPopup &&
-        !g.petsUnlockOpen && (
+        !g.petsUnlockOpen &&
+        !g.evolveAnim && (
           <FamiliarRevealModal
             familiar={g.familiarReveal}
             onDismiss={g.dismissFamiliarReveal}
@@ -195,10 +247,12 @@ export function GameApp() {
 
       {g.evolveHint &&
         !g.celebration &&
+        !g.encounter &&
         !g.openingChest &&
         !g.streakPopup &&
         !g.petsUnlockOpen &&
-        !g.familiarReveal && (
+        !g.familiarReveal &&
+        !g.evolveAnim && (
           <EvolveHintModal
             kind={g.evolveHint}
             onDismiss={g.dismissEvolveHint}
@@ -207,11 +261,13 @@ export function GameApp() {
 
       {g.dailyGift &&
         !g.celebration &&
+        !g.encounter &&
         !g.openingChest &&
         !g.streakPopup &&
         !g.petsUnlockOpen &&
         !g.familiarReveal &&
-        !g.evolveHint && (
+        !g.evolveHint &&
+        !g.evolveAnim && (
           <DailyChestGift onDismiss={g.dismissDailyGift} />
         )}
 

@@ -12,6 +12,7 @@ import { PetTreatIcon } from "@/components/PetTreatIcon";
 import { GearIcon, RarityBadge } from "@/components/PixelGearIcon";
 import { GoldCoin } from "@/components/GoldCoin";
 import { XpBottleIcon } from "@/components/XpBottleIcon";
+import { playClick } from "@/lib/sounds";
 import type { GameState, GearId, PetId, PetTreatId, XpBottleId } from "@/lib/types";
 
 export function StoreScreen({
@@ -61,7 +62,10 @@ export function StoreScreen({
             <button
               type="button"
               disabled={state.gold < STORE_CHESTS.common.price}
-              onClick={() => onBuyChest("common")}
+              onClick={() => {
+                playClick();
+                onBuyChest("common");
+              }}
               className="btn btn-secondary mt-3 min-h-10 w-full gap-1 text-xs"
             >
               <GoldCoin size={16} />
@@ -84,7 +88,10 @@ export function StoreScreen({
               <button
                 type="button"
                 disabled={state.gold < bottle.price}
-                onClick={() => onBuyXpBottle(bottle.id)}
+                onClick={() => {
+                  playClick();
+                  onBuyXpBottle(bottle.id);
+                }}
                 className="btn btn-secondary mt-2 min-h-10 w-full gap-1 text-xs"
               >
                 <GoldCoin size={16} />
@@ -105,7 +112,10 @@ export function StoreScreen({
             <button
               type="button"
               disabled={state.gold < STORE_CHESTS.legendary.price}
-              onClick={() => onBuyChest("legendary")}
+              onClick={() => {
+                playClick();
+                onBuyChest("legendary");
+              }}
               className="btn btn-primary mt-3 min-h-10 w-full gap-1 text-xs"
             >
               <GoldCoin size={16} />
@@ -128,7 +138,10 @@ export function StoreScreen({
               <button
                 type="button"
                 disabled={state.gold < treat.price}
-                onClick={() => onBuyPetTreat(treat.id)}
+                onClick={() => {
+                  playClick();
+                  onBuyPetTreat(treat.id);
+                }}
                 className="btn btn-secondary mt-2 min-h-10 w-full gap-1 text-xs"
               >
                 <GoldCoin size={16} />
@@ -152,7 +165,10 @@ export function StoreScreen({
               disabled={
                 stoneBoughtToday || state.gold < EVO_STONE_STORE_PRICE
               }
-              onClick={onBuyEvoStone}
+              onClick={() => {
+                playClick();
+                onBuyEvoStone();
+              }}
               className="btn btn-primary mt-2 min-h-10 w-full gap-1 text-xs"
             >
               {stoneBoughtToday ? (
@@ -210,7 +226,10 @@ export function StoreScreen({
                       <button
                         type="button"
                         disabled={!canBuy}
-                        onClick={() => onBuyPet(pet.id)}
+                        onClick={() => {
+                          playClick();
+                          onBuyPet(pet.id);
+                        }}
                         className="btn btn-primary min-h-10 gap-1 px-3 text-xs"
                       >
                         <GoldCoin size={14} />
@@ -251,7 +270,10 @@ export function StoreScreen({
                 <button
                   type="button"
                   disabled={!canBuy}
-                  onClick={() => onBuyGear(g.id)}
+                  onClick={() => {
+                    playClick();
+                    onBuyGear(g.id);
+                  }}
                   className="btn btn-primary min-h-10 gap-1 px-3 text-xs"
                 >
                   <GoldCoin size={14} />

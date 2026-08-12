@@ -54,6 +54,7 @@ export const EVOLVE_LEVEL: Record<1 | 2, number> = {
 /** Chance an Evolution Stone replaces other chest loot. */
 export const EVO_STONE_CHANCE_NORMAL = 0.02;
 export const EVO_STONE_CHANCE_LEGENDARY = 0.09;
+export const EVO_STONE_CHANCE_CRYSTAL = 0.2;
 
 /** Store price; one purchase per calendar day. */
 export const EVO_STONE_STORE_PRICE = 300;
@@ -116,6 +117,7 @@ export const PET_DUPLICATE_XP: Record<Rarity, number> = {
 /** Chance a chest drop is a pet (when unlocked). Keep uncommon — gear is the default. */
 export const PET_CHEST_CHANCE_NORMAL = 0.06;
 export const PET_CHEST_CHANCE_LEGENDARY = 0.1;
+export const PET_CHEST_CHANCE_CRYSTAL = 0.22;
 
 /** @deprecated use per-chest chances */
 export const PET_CHEST_CHANCE = PET_CHEST_CHANCE_NORMAL;

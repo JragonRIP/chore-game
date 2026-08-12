@@ -16,7 +16,7 @@ export type AvatarId =
   | "archer"
   | "dragon-rider"
   | "berserker";
-export type ChestType = "normal" | "legendary";
+export type ChestType = "normal" | "legendary" | "crystal";
 export type PetSpecies = "lizard" | "wolf" | "lion" | "dragon";
 export type FamiliarId = "maple" | "caliper";
 /** 1 = baby, 2 = adult, 3 = battle form */
@@ -173,6 +173,13 @@ export interface PetTreatDef {
   hue: number;
 }
 
+export interface ActiveDungeon {
+  /** Three quests that count as dungeon rooms. */
+  questIds: QuestId[];
+  /** Rooms already cleared. */
+  clearedIds: QuestId[];
+}
+
 export interface GameState {
   version: 4;
   hasSeenStory: boolean;
@@ -215,6 +222,10 @@ export interface GameState {
   weeklyQuests: number;
   /** Monday date key (YYYY-MM-DD) for weeklyQuests. */
   weeklyQuestWeek: string | null;
+  /** Calendar day a dungeon was started (1/day). */
+  dungeonDate: string | null;
+  /** Active daily dungeon run, if any. */
+  activeDungeon: ActiveDungeon | null;
   /** Consecutive days with at least one completed quest. */
   streakDays: number;
   /** Calendar day the streak last incremented. */

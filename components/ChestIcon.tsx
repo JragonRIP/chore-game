@@ -1,6 +1,22 @@
 "use client";
 
-type ChestVariant = "wooden" | "golden";
+type ChestVariant = "wooden" | "golden" | "crystal";
+
+export function chestIconVariant(
+  type: "normal" | "legendary" | "crystal",
+): ChestVariant {
+  if (type === "crystal") return "crystal";
+  if (type === "legendary") return "golden";
+  return "wooden";
+}
+
+export function chestLabel(
+  type: "normal" | "legendary" | "crystal",
+): string {
+  if (type === "crystal") return "Crystal Chest";
+  if (type === "legendary") return "Golden Chest";
+  return "Wooden Chest";
+}
 
 export function ChestIcon({
   variant,
@@ -19,7 +35,13 @@ export function ChestIcon({
       className={className}
       aria-hidden
     >
-      {variant === "wooden" ? <WoodenChest /> : <GoldenChest />}
+      {variant === "wooden" ? (
+        <WoodenChest />
+      ) : variant === "golden" ? (
+        <GoldenChest />
+      ) : (
+        <CrystalChest />
+      )}
     </svg>
   );
 }
@@ -113,6 +135,42 @@ function GoldenChest() {
       <circle cx="18" cy="22" r="1.2" fill="#FEF9C3" />
       <circle cx="46" cy="20" r="1.5" fill="#FEF9C3" />
       <circle cx="50" cy="30" r="1" fill="#FFF" opacity="0.8" />
+    </>
+  );
+}
+
+function CrystalChest() {
+  return (
+    <>
+      <ellipse cx="32" cy="58" rx="18" ry="3.5" fill="#152033" opacity="0.16" />
+      {/* aura */}
+      <ellipse cx="32" cy="36" rx="24" ry="26" fill="#67E8F9" opacity="0.28" />
+      <ellipse cx="32" cy="34" rx="16" ry="18" fill="#A78BFA" opacity="0.22" />
+      {/* crystal body — faceted gem chest */}
+      <path
+        d="M18 24 L32 10 L46 24 L42 50 L22 50 Z"
+        fill="#7C3AED"
+      />
+      <path
+        d="M22 26 L32 14 L42 26 L38 46 L26 46 Z"
+        fill="#A78BFA"
+      />
+      <path d="M32 14 L42 26 L32 30 Z" fill="#DDD6FE" />
+      <path d="M32 14 L22 26 L32 30 Z" fill="#C4B5FD" />
+      <path d="M22 26 L32 30 L26 46 Z" fill="#8B5CF6" />
+      <path d="M42 26 L32 30 L38 46 Z" fill="#6D28D9" />
+      <path d="M26 46 L32 30 L38 46 Z" fill="#5B21B6" opacity="0.85" />
+      {/* lid facet highlight */}
+      <path d="M28 18 L32 12 L36 18 L32 22 Z" fill="#F5F3FF" opacity="0.9" />
+      {/* gold clasp */}
+      <rect x="28" y="36" width="8" height="10" rx="1.5" fill="#FBBF24" />
+      <circle cx="32" cy="40" r="2.2" fill="#67E8F9" />
+      <circle cx="32" cy="39.2" r="0.9" fill="#ECFEFF" />
+      {/* sparkles */}
+      <circle cx="16" cy="20" r="1.4" fill="#ECFEFF" />
+      <circle cx="48" cy="18" r="1.8" fill="#F5F3FF" />
+      <circle cx="50" cy="34" r="1.1" fill="#A5F3FC" />
+      <circle cx="14" cy="38" r="1" fill="#DDD6FE" />
     </>
   );
 }

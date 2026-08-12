@@ -3,12 +3,19 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { GEAR_BY_ID } from "@/lib/gear";
 import { FAMILIAR_LABELS, PET_BY_ID } from "@/lib/pets";
-import { ChestIcon } from "@/components/ChestIcon";
+import { ChestIcon, chestIconVariant, chestLabel } from "@/components/ChestIcon";
 import { PetIcon, PetSprite } from "@/components/PetIcon";
 import { GearIcon, RarityBadge } from "@/components/PixelGearIcon";
 import { GoldCoin } from "@/components/GoldCoin";
 import type { Celebration } from "@/hooks/useGameState";
 import { PARENT_PIN } from "@/hooks/useGameState";
+import {
+  playChestOpen,
+  playClick,
+  playFanfare,
+  playLevelUp,
+  playQuestComplete,
+} from "@/lib/sounds";
 import type {
   FamiliarId,
   GameState,
@@ -33,6 +40,8 @@ export function CelebrationModal({
     : null;
 
   useEffect(() => {
+    playQuestComplete();
+    if (data.levels.length > 0) playLevelUp();
     const hold = data.petXp > 0 ? 2100 : 1750;
     const t1 = window.setTimeout(() => setPhase("fly"), 450);
     const t2 = window.setTimeout(() => setPhase("done"), 1400);
@@ -132,13 +141,33 @@ export function ChestOpenModal({
     loot && (loot.kind === "pet" || loot.kind === "pet-duplicate")
       ? PET_BY_ID[loot.petId]
       : null;
+  const crystal = chest.type === "crystal";
   const legendary = chest.type === "legendary";
+  const openMs = crystal ? 2000 : legendary ? 1600 : 900;
+  const [cardFlipped, setCardFlipped] = useState(false);
 
   useEffect(() => {
     if (phase !== "opening") return;
-    const t = window.setTimeout(onFinishOpen, legendary ? 1600 : 900);
+    playChestOpen();
+    const t = window.setTimeout(onFinishOpen, openMs);
     return () => window.clearTimeout(t);
-  }, [phase, onFinishOpen, legendary]);
+  }, [phase, onFinishOpen, openMs]);
+
+  useEffect(() => {
+    if (phase !== "reveal" || !loot) return;
+    setCardFlipped(false);
+    const t = window.setTimeout(() => {
+      setCardFlipped(true);
+      playFanfare();
+    }, 450);
+    return () => window.clearTimeout(t);
+  }, [phase, loot]);
+
+  const openClass = crystal
+    ? "bg-gradient-to-br from-violet-200 via-cyan-100 to-white chest-open-crystal"
+    : legendary
+      ? "bg-gradient-to-br from-amber-200 to-yellow-100 chest-open-legendary"
+      : "bg-amber-50 chest-open-wooden";
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/45 p-4 backdrop-blur-sm sm:items-center">
@@ -146,19 +175,12 @@ export function ChestOpenModal({
         {phase === "opening" && (
           <>
             <div
-              className={`mx-auto flex h-32 w-32 items-center justify-center rounded-3xl ${
-                legendary
-                  ? "bg-gradient-to-br from-amber-200 to-yellow-100 chest-open-legendary"
-                  : "bg-amber-50 chest-open-wooden"
-              }`}
+              className={`mx-auto flex h-32 w-32 items-center justify-center rounded-3xl ${openClass}`}
             >
-              <ChestIcon
-                variant={legendary ? "golden" : "wooden"}
-                size={110}
-              />
+              <ChestIcon variant={chestIconVariant(chest.type)} size={110} />
             </div>
             <h3 className="mt-4 font-display text-xl text-ink">
-              {legendary ? "Opening Golden Chest…" : "Opening Wooden Chest…"}
+              Opening {chestLabel(chest.type)}…
             </h3>
             <p className="mt-2 text-sm text-ink-soft">{chest.reason}</p>
           </>
@@ -166,97 +188,114 @@ export function ChestOpenModal({
 
         {phase === "reveal" && loot && (
           <>
-            {loot.kind === "duplicate" && (
-              <>
-                <p className="text-xs font-bold uppercase tracking-wide text-amber-700">
-                  Duplicate
-                </p>
-                <p className="mt-2 text-ink-soft">
-                  Already owned{" "}
-                  <span className="font-semibold text-ink">{gear?.name}</span>
-                </p>
-                <div className="mt-4 flex items-center justify-center gap-2 font-display text-2xl text-amber-800">
-                  <GoldCoin size={28} />+{loot.coinsAwarded}
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-teal-deep">
+              Loot Card
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                if (!cardFlipped) {
+                  setCardFlipped(true);
+                  playFanfare();
+                }
+              }}
+              className="loot-card-scene mx-auto mt-4"
+              aria-label="Reveal loot card"
+            >
+              <div
+                className={`loot-card ${cardFlipped ? "loot-card-flipped" : ""}`}
+              >
+                <div className="loot-card-face loot-card-back">
+                  <ChestIcon
+                    variant={chestIconVariant(chest.type)}
+                    size={72}
+                  />
+                  <p className="mt-2 text-xs font-bold text-white/90">Tap</p>
                 </div>
-              </>
-            )}
-            {loot.kind === "gear" && gear && (
-              <>
-                <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">
-                  New Gear!
-                </p>
-                <div className="mt-4 flex flex-col items-center gap-2 loot-pop">
-                  <GearIcon gear={gear} size={88} />
-                  <p className="font-display text-lg text-ink">{gear.name}</p>
-                  <RarityBadge rarity={gear.rarity} />
-                  <p className="text-sm text-ink-soft">
-                    +{gear.xpBonusPct}% XP · +{gear.coinBonus} gold / quest
-                  </p>
+                <div className="loot-card-face loot-card-front">
+                  {loot.kind === "duplicate" && (
+                    <>
+                      <p className="text-[10px] font-bold uppercase tracking-wide text-amber-700">
+                        Duplicate
+                      </p>
+                      {gear && <GearIcon gear={gear} size={64} />}
+                      <p className="mt-1 text-sm font-semibold text-ink">
+                        {gear?.name}
+                      </p>
+                      <div className="mt-1 flex items-center justify-center gap-1 font-display text-lg text-amber-800">
+                        <GoldCoin size={18} />+{loot.coinsAwarded}
+                      </div>
+                    </>
+                  )}
+                  {loot.kind === "gear" && gear && (
+                    <>
+                      <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-700">
+                        New Gear!
+                      </p>
+                      <GearIcon gear={gear} size={72} />
+                      <p className="mt-1 font-display text-base text-ink">
+                        {gear.name}
+                      </p>
+                      <RarityBadge rarity={gear.rarity} />
+                    </>
+                  )}
+                  {loot.kind === "pet" && pet && (
+                    <>
+                      <p className="text-[10px] font-bold uppercase tracking-wide text-teal-deep">
+                        New Companion!
+                      </p>
+                      <PetIcon pet={pet} size={72} />
+                      <p className="mt-1 font-display text-base text-ink">
+                        {pet.name}
+                      </p>
+                      <RarityBadge rarity={pet.rarity} />
+                    </>
+                  )}
+                  {loot.kind === "pet-duplicate" && (
+                    <>
+                      <p className="text-[10px] font-bold uppercase tracking-wide text-amber-700">
+                        Duplicate Pet
+                      </p>
+                      {pet && <PetIcon pet={pet} size={64} />}
+                      <div className="mt-1 flex flex-col items-center gap-0.5 font-display text-base text-amber-800">
+                        <span className="inline-flex items-center gap-1">
+                          <GoldCoin size={16} />+{loot.coinsAwarded}
+                        </span>
+                        <span className="text-sm text-emerald-700">
+                          +{loot.xpAwarded} XP
+                        </span>
+                      </div>
+                    </>
+                  )}
+                  {loot.kind === "evo-stone" && (
+                    <>
+                      <p className="text-[10px] font-bold uppercase tracking-wide text-violet-700">
+                        Rare Find!
+                      </p>
+                      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-100 to-amber-50 text-4xl">
+                        💎
+                      </div>
+                      <p className="mt-1 font-display text-base text-ink">
+                        Evolution Stone
+                      </p>
+                    </>
+                  )}
                 </div>
-              </>
-            )}
-            {loot.kind === "pet" && pet && (
-              <>
-                <p className="text-xs font-bold uppercase tracking-wide text-teal-deep">
-                  New Companion!
-                </p>
-                <div className="mt-4 flex flex-col items-center gap-2 loot-pop">
-                  <PetIcon pet={pet} size={88} />
-                  <p className="font-display text-lg text-ink">{pet.name}</p>
-                  <RarityBadge rarity={pet.rarity} />
-                  <p className="text-sm text-ink-soft">
-                    +{pet.xpBonusPct}% XP · +{pet.coinBonus} gold / quest
-                  </p>
-                  <p className="text-xs font-semibold text-teal-deep">
-                    {pet.traitLabel}
-                  </p>
-                </div>
-              </>
-            )}
-            {loot.kind === "pet-duplicate" && (
-              <>
-                <p className="text-xs font-bold uppercase tracking-wide text-amber-700">
-                  Duplicate Companion
-                </p>
-                <p className="mt-2 text-ink-soft">
-                  Already owned{" "}
-                  <span className="font-semibold text-ink">{pet?.name}</span>
-                </p>
-                <div className="mt-4 flex flex-col items-center gap-2 font-display text-xl text-amber-800">
-                  <div className="flex items-center gap-2">
-                    <GoldCoin size={28} />+{loot.coinsAwarded}
-                  </div>
-                  <span className="text-emerald-700">+{loot.xpAwarded} XP</span>
-                </div>
-              </>
-            )}
-            {loot.kind === "evo-stone" && (
-              <>
-                <p className="text-xs font-bold uppercase tracking-wide text-violet-700">
-                  Rare Find!
-                </p>
-                <div className="mt-4 flex flex-col items-center gap-2 loot-pop">
-                  <div className="flex h-24 w-24 items-center justify-center rounded-3xl bg-gradient-to-br from-violet-100 to-amber-50 text-5xl shadow-sm">
-                    💎
-                  </div>
-                  <p className="font-display text-lg text-ink">
-                    Evolution Stone
-                  </p>
-                  <p className="text-sm text-ink-soft">
-                    Use on the Pets tab to evolve a companion.
-                  </p>
-                </div>
-              </>
-            )}
-            {loot.bonusCoins > 0 && (
+              </div>
+            </button>
+            {cardFlipped && loot.bonusCoins > 0 && (
               <div className="mt-3 flex items-center justify-center gap-1.5 text-sm font-bold text-amber-800">
-                <GoldCoin size={16} />+{loot.bonusCoins} gold
+                <GoldCoin size={16} />+{loot.bonusCoins} chest gold
               </div>
             )}
             <button
               type="button"
-              onClick={onDismiss}
-              className="btn btn-primary pointer-events-auto mt-5 w-full"
+              disabled={!cardFlipped}
+              onClick={() => {
+                playClick();
+                onDismiss();
+              }}
+              className="btn btn-primary pointer-events-auto mt-5 w-full disabled:opacity-40"
             >
               Claim
             </button>
@@ -371,7 +410,14 @@ export function DailyChestGift({
           A free Wooden Chest was added to your Vault. Open it whenever
           you&apos;re ready!
         </p>
-        <button type="button" onClick={onDismiss} className="btn btn-primary mt-5 w-full">
+        <button
+          type="button"
+          onClick={() => {
+            playClick();
+            onDismiss();
+          }}
+          className="btn btn-primary mt-5 w-full"
+        >
           Awesome!
         </button>
       </div>

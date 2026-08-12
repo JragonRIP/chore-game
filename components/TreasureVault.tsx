@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { GEAR_BY_ID } from "@/lib/gear";
 import { STORE_XP_BOTTLES } from "@/lib/xpBottles";
-import { ChestIcon } from "@/components/ChestIcon";
+import { ChestIcon, chestIconVariant, chestLabel } from "@/components/ChestIcon";
 import { GearIcon, RarityBadge } from "@/components/PixelGearIcon";
 import { XpBottleIcon } from "@/components/XpBottleIcon";
 import type { GameState, VaultChest, XpBottleId } from "@/lib/types";
@@ -114,12 +114,12 @@ export function TreasureVault({
               className="surface-strong flex items-center gap-3 p-3 text-left transition hover:scale-[1.01]"
             >
               <ChestIcon
-                variant={chest.type === "legendary" ? "golden" : "wooden"}
+                variant={chestIconVariant(chest.type)}
                 size={64}
               />
               <div className="min-w-0 flex-1">
                 <p className="font-display text-base text-ink">
-                  {chest.type === "legendary" ? "Golden Chest" : "Wooden Chest"}
+                  {chestLabel(chest.type)}
                 </p>
                 <p className="mt-0.5 truncate text-xs text-ink-soft">
                   {chest.reason}

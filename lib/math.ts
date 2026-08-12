@@ -8,8 +8,6 @@ import {
 import {
   ALL_PETS,
   PET_BY_ID,
-  PET_CHEST_CHANCE_LEGENDARY,
-  PET_CHEST_CHANCE_NORMAL,
   PET_DUPLICATE_COINS,
   PET_DUPLICATE_XP,
   applyPetXpGain,
@@ -21,11 +19,17 @@ import {
   petGainsXpFromQuest,
   petLevelMultiplier,
   petStageMultiplier,
+  EVO_STONE_CHANCE_CRYSTAL,
   EVO_STONE_CHANCE_LEGENDARY,
   EVO_STONE_CHANCE_NORMAL,
+  PET_CHEST_CHANCE_CRYSTAL,
+  PET_CHEST_CHANCE_LEGENDARY,
+  PET_CHEST_CHANCE_NORMAL,
 } from "./pets";
 import type {
+  ActiveDungeon,
   ActiveQuest,
+  ChestType,
   EquippedMap,
   GameState,
   GearDef,
@@ -106,6 +110,21 @@ function asCount(n: unknown): number {
   return typeof n === "number" && n > 0 ? Math.floor(n) : 0;
 }
 
+function normalizeActiveDungeon(raw: unknown): ActiveDungeon | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const d = raw as Record<string, unknown>;
+  const questIds = Array.isArray(d.questIds)
+    ? (d.questIds as string[]).filter((id) => typeof id === "string")
+    : [];
+  if (questIds.length === 0) return null;
+  const clearedIds = Array.isArray(d.clearedIds)
+    ? (d.clearedIds as string[]).filter(
+        (id) => typeof id === "string" && questIds.includes(id),
+      )
+    : [];
+  return { questIds, clearedIds };
+}
+
 export function emptyEquipped(): EquippedMap {
   return {
     helmet: null,
@@ -151,6 +170,8 @@ export function createInitialState(): GameState {
     evoStoneBuyDate: null,
     weeklyQuests: 0,
     weeklyQuestWeek: null,
+    dungeonDate: null,
+    activeDungeon: null,
     streakDays: 0,
     streakDate: null,
     streakBest: 0,
@@ -285,6 +306,8 @@ export function normalizeState(raw: unknown): GameState {
         : 0,
     weeklyQuestWeek:
       typeof r.weeklyQuestWeek === "string" ? r.weeklyQuestWeek : null,
+    dungeonDate: typeof r.dungeonDate === "string" ? r.dungeonDate : null,
+    activeDungeon: normalizeActiveDungeon(r.activeDungeon),
     streakDays: asCount(r.streakDays),
     streakDate: typeof r.streakDate === "string" ? r.streakDate : null,
     streakBest: asCount(r.streakBest),
@@ -535,13 +558,20 @@ function pickWeighted<T extends { weight: number }>(items: T[]): T {
   return items[items.length - 1]!;
 }
 
-function rarityPool(chest: "normal" | "legendary"): Rarity {
+function rarityPool(chest: ChestType): Rarity {
   if (chest === "normal") {
     return pickWeighted([
       { rarity: "scrap" as const, weight: 45 },
       { rarity: "forged" as const, weight: 35 },
       { rarity: "enchanted" as const, weight: 18 },
       { rarity: "mythic" as const, weight: 2 },
+    ]).rarity;
+  }
+  if (chest === "crystal") {
+    return pickWeighted([
+      { rarity: "enchanted" as const, weight: 15 },
+      { rarity: "mythic" as const, weight: 55 },
+      { rarity: "relic" as const, weight: 30 },
     ]).rarity;
   }
   return pickWeighted([
@@ -552,13 +582,11 @@ function rarityPool(chest: "normal" | "legendary"): Rarity {
   ]).rarity;
 }
 
-export function chestBonusCoins(
-  chest: "normal" | "legendary",
-  rarity: Rarity,
-): number {
-  const base = chest === "legendary" ? 50 : 15;
-  if (rarity === "relic") return base + 20;
-  if (rarity === "mythic") return base + 10;
+export function chestBonusCoins(chest: ChestType, rarity: Rarity): number {
+  const base =
+    chest === "crystal" ? 100 : chest === "legendary" ? 50 : 15;
+  if (rarity === "relic") return base + 25;
+  if (rarity === "mythic") return base + 12;
   return base;
 }
 
@@ -607,13 +635,15 @@ function dropRarity(drop: ChestDrop): Rarity {
 
 export function rollChestLoot(
   ownedGear: GearId[],
-  chest: "normal" | "legendary",
+  chest: ChestType,
   opts?: { petsUnlocked?: boolean; ownedPets?: PetId[] },
 ): LootEvent {
   const stoneChance =
-    chest === "legendary"
-      ? EVO_STONE_CHANCE_LEGENDARY
-      : EVO_STONE_CHANCE_NORMAL;
+    chest === "crystal"
+      ? EVO_STONE_CHANCE_CRYSTAL
+      : chest === "legendary"
+        ? EVO_STONE_CHANCE_LEGENDARY
+        : EVO_STONE_CHANCE_NORMAL;
 
   // Rare replacement drop — Evolution Stone instead of gear/pet.
   if (Math.random() < stoneChance) {
@@ -627,9 +657,11 @@ export function rollChestLoot(
   const petsUnlocked = Boolean(opts?.petsUnlocked);
   const ownedPets = opts?.ownedPets ?? [];
   const petChance =
-    chest === "legendary"
-      ? PET_CHEST_CHANCE_LEGENDARY
-      : PET_CHEST_CHANCE_NORMAL;
+    chest === "crystal"
+      ? PET_CHEST_CHANCE_CRYSTAL
+      : chest === "legendary"
+        ? PET_CHEST_CHANCE_LEGENDARY
+        : PET_CHEST_CHANCE_NORMAL;
 
   // Gear is the default. Pets are an uncommon bonus roll only.
   const drop =
