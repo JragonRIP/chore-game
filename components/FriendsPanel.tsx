@@ -5,7 +5,11 @@ import { GoldCoin } from "@/components/GoldCoin";
 import type { useOnline } from "@/hooks/useOnline";
 import { DUPLICATE_COINS, GEAR_BY_ID } from "@/lib/gear";
 import { ALL_PETS, PET_DUPLICATE_COINS } from "@/lib/pets";
-import type { ClaimGiftResult, GiftType } from "@/lib/online";
+import {
+  buildWeeklyLeaderboard,
+  type ClaimGiftResult,
+  type GiftType,
+} from "@/lib/online";
 import type { GameState } from "@/lib/types";
 
 type OnlineApi = ReturnType<typeof useOnline>;
@@ -90,6 +94,18 @@ export function FriendsPanel({
         .sort((a, b) => a.name.localeCompare(b.name)),
     [state.ownedPets],
   );
+
+  const leaderboard = useMemo(() => {
+    if (!online.player) return [];
+    return buildWeeklyLeaderboard(
+      {
+        playerId: online.player.id,
+        displayName: online.player.display_name,
+      },
+      state,
+      online.friends,
+    );
+  }, [online.player, online.friends, state]);
 
   if (!open) return null;
 
@@ -244,6 +260,43 @@ export function FriendsPanel({
                 Copy code
               </button>
             </div>
+
+            {leaderboard.length > 0 && (
+              <div>
+                <h4 className="font-display text-lg text-ink">
+                  Weekly board
+                </h4>
+                <p className="mt-0.5 text-xs text-ink-soft">
+                  Quests this week · streak as tie-breaker. Friendly race!
+                </p>
+                <div className="mt-2 flex flex-col gap-1.5">
+                  {leaderboard.map((row, i) => (
+                    <div
+                      key={row.playerId}
+                      className={`flex items-center gap-2 rounded-2xl px-3 py-2 ${
+                        row.isYou
+                          ? "bg-teal/15 ring-1 ring-teal/30"
+                          : "bg-sky-1/70"
+                      }`}
+                    >
+                      <span className="w-6 text-center font-display text-sm text-ink-soft">
+                        {i + 1}
+                      </span>
+                      <p className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">
+                        {row.displayName}
+                        {row.isYou ? " (you)" : ""}
+                      </p>
+                      <span className="text-[10px] font-bold text-teal-deep">
+                        {row.weeklyQuests} quests
+                      </span>
+                      <span className="text-[10px] font-bold text-amber-800">
+                        🔥{row.streakDays}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {online.gifts.length > 0 && (
               <div>

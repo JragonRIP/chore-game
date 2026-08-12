@@ -38,12 +38,19 @@ export type AchievementId =
   | "first-relic"
   | "first-pet"
   | "pet-level-5"
+  | "pet-level-10"
+  | "pet-evolve-adult"
+  | "pet-evolve-battle"
+  | "pets-all-species"
+  | "familiar-maple"
+  | "familiar-caliper"
   | "salvage-1"
   | "level-5"
   | "level-10"
   | "gold-500"
   | "store-buy"
-  | "gift-friend";
+  | "gift-friend"
+  | "evo-stone-buy";
 
 export type QuestId = string;
 export type GearId = string;
@@ -202,6 +209,12 @@ export interface GameState {
   petTreats: Record<PetTreatId, number>;
   /** Evolution stones for pet stage-ups. */
   evolutionStones: number;
+  /** Calendar day an Evolution Stone was last bought from the store. */
+  evoStoneBuyDate: string | null;
+  /** Quests completed in the current weekly leaderboard window. */
+  weeklyQuests: number;
+  /** Monday date key (YYYY-MM-DD) for weeklyQuests. */
+  weeklyQuestWeek: string | null;
   /** Consecutive days with at least one completed quest. */
   streakDays: number;
   /** Calendar day the streak last incremented. */

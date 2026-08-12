@@ -4,7 +4,7 @@ import {
   makeFriendCode,
   usernameToEmail,
 } from "@/lib/supabase";
-import { normalizeState } from "@/lib/math";
+import { normalizeState, weekKey } from "@/lib/math";
 import { loadGame } from "@/lib/storage";
 
 export type PlayerRow = {
@@ -24,6 +24,16 @@ export type FriendEntry = {
   friendCode: string;
   status: "pending" | "accepted";
   incoming: boolean;
+  weeklyQuests?: number;
+  streakDays?: number;
+};
+
+export type LeaderboardRow = {
+  playerId: string;
+  displayName: string;
+  weeklyQuests: number;
+  streakDays: number;
+  isYou: boolean;
 };
 
 export type GiftType = "gold" | "gear" | "pet" | "chest";
@@ -206,7 +216,7 @@ export async function listFriends(): Promise<FriendEntry[]> {
   ];
   const { data: players, error: pErr } = await c
     .from("players")
-    .select("id, username, display_name, friend_code")
+    .select("id, username, display_name, friend_code, save_json")
     .in("id", otherIds);
   if (pErr) throw new Error(pErr.message);
   const byId = Object.fromEntries((players ?? []).map((p) => [p.id, p]));
@@ -215,6 +225,15 @@ export async function listFriends(): Promise<FriendEntry[]> {
     const otherId =
       row.requester_id === uid ? row.addressee_id : row.requester_id;
     const other = byId[otherId];
+    const save =
+      other?.save_json &&
+      typeof other.save_json === "object" &&
+      !Array.isArray(other.save_json)
+        ? (other.save_json as Record<string, unknown>)
+        : null;
+    const thisWeek = weekKey();
+    const friendWeek =
+      typeof save?.weeklyQuestWeek === "string" ? save.weeklyQuestWeek : null;
     return {
       friendshipId: row.id,
       playerId: otherId,
@@ -223,7 +242,45 @@ export async function listFriends(): Promise<FriendEntry[]> {
       friendCode: other?.friend_code ?? "",
       status: row.status as "pending" | "accepted",
       incoming: row.addressee_id === uid && row.status === "pending",
+      weeklyQuests:
+        friendWeek === thisWeek && typeof save?.weeklyQuests === "number"
+          ? save.weeklyQuests
+          : 0,
+      streakDays: typeof save?.streakDays === "number" ? save.streakDays : 0,
     };
+  });
+}
+
+/** You + accepted friends, ranked by weekly quests then streak. */
+export function buildWeeklyLeaderboard(
+  me: { displayName: string; playerId: string },
+  state: GameState,
+  friends: FriendEntry[],
+): LeaderboardRow[] {
+  const rows: LeaderboardRow[] = [
+    {
+      playerId: me.playerId,
+      displayName: me.displayName,
+      weeklyQuests: state.weeklyQuests ?? 0,
+      streakDays: state.streakDays ?? 0,
+      isYou: true,
+    },
+  ];
+  for (const f of friends) {
+    if (f.status !== "accepted") continue;
+    rows.push({
+      playerId: f.playerId,
+      displayName: f.displayName,
+      weeklyQuests: f.weeklyQuests ?? 0,
+      streakDays: f.streakDays ?? 0,
+      isYou: false,
+    });
+  }
+  return rows.sort((a, b) => {
+    if (b.weeklyQuests !== a.weeklyQuests) {
+      return b.weeklyQuests - a.weeklyQuests;
+    }
+    return b.streakDays - a.streakDays;
   });
 }
 

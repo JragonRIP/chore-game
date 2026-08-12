@@ -16,6 +16,7 @@ export function PlayerHeader({
   friendsBadge,
   onAchievements,
   achievementsBadge,
+  onCollection,
   onlineActive,
 }: {
   state: GameState;
@@ -27,6 +28,7 @@ export function PlayerHeader({
   friendsBadge?: number;
   onAchievements?: () => void;
   achievementsBadge?: number;
+  onCollection?: () => void;
   onlineActive?: boolean;
 }) {
   const hero = state.hero!;
@@ -128,6 +130,21 @@ export function PlayerHeader({
                       {readyCount}
                     </span>
                   )}
+                </button>
+              )}
+              {onCollection && (
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm font-semibold text-ink transition hover:bg-sky-1"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onCollection();
+                  }}
+                >
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-sky-100 text-sky-800">
+                    📖
+                  </span>
+                  <span className="flex-1">Collection</span>
                 </button>
               )}
             </div>

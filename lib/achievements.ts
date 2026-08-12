@@ -1,4 +1,5 @@
 import { GEAR_BY_ID, GEAR_SETS, getSetPieces } from "@/lib/gear";
+import { PET_BY_ID, PET_SPECIES } from "@/lib/pets";
 import type { AchievementId, GameState } from "@/lib/types";
 
 export interface AchievementDef {
@@ -19,6 +20,21 @@ function ownsFullSet(state: GameState): boolean {
       pieces.every((p) => state.ownedGear.includes(p.id))
     );
   });
+}
+
+function ownsAllSpecies(state: GameState): boolean {
+  const owned = new Set(
+    state.ownedPets
+      .map((id) => PET_BY_ID[id]?.species)
+      .filter(Boolean),
+  );
+  return PET_SPECIES.every((s) => owned.has(s));
+}
+
+function anyPetStageAtLeast(state: GameState, stage: number): boolean {
+  return Object.values(state.petProgress).some(
+    (p) => (p?.stage ?? 1) >= stage,
+  );
 }
 
 export const ACHIEVEMENTS: AchievementDef[] = [
@@ -151,6 +167,61 @@ export const ACHIEVEMENTS: AchievementDef[] = [
       Object.values(s.petProgress).some((p) => (p?.level ?? 0) >= 5),
   },
   {
+    id: "pet-level-10",
+    name: "Max Bond",
+    description: "Get a pet to level 10.",
+    icon: "💖",
+    gold: 120,
+    xp: 150,
+    unlocked: (s) =>
+      Object.values(s.petProgress).some((p) => (p?.level ?? 0) >= 10),
+  },
+  {
+    id: "pet-evolve-adult",
+    name: "Growing Up",
+    description: "Evolve a pet to its adult form.",
+    icon: "✨",
+    gold: 90,
+    xp: 110,
+    unlocked: (s) => anyPetStageAtLeast(s, 2),
+  },
+  {
+    id: "pet-evolve-battle",
+    name: "Battle Ready",
+    description: "Evolve a pet to its Battle form.",
+    icon: "⚔️",
+    gold: 150,
+    xp: 180,
+    unlocked: (s) => anyPetStageAtLeast(s, 3),
+  },
+  {
+    id: "pets-all-species",
+    name: "Full Party",
+    description: "Own every pet species at least once.",
+    icon: "🐉",
+    gold: 120,
+    xp: 140,
+    unlocked: ownsAllSpecies,
+  },
+  {
+    id: "familiar-maple",
+    name: "Maple Found",
+    description: "Rename a pet Maple and meet a familiar friend.",
+    icon: "🐶",
+    gold: 60,
+    xp: 70,
+    unlocked: (s) => Boolean(s.familiarRevealSeen?.maple),
+  },
+  {
+    id: "familiar-caliper",
+    name: "Caliper Found",
+    description: "Rename a pet Caliper and meet a familiar friend.",
+    icon: "🐕",
+    gold: 60,
+    xp: 70,
+    unlocked: (s) => Boolean(s.familiarRevealSeen?.caliper),
+  },
+  {
     id: "salvage-1",
     name: "Recycle Hero",
     description: "Salvage a gear piece in the Armory.",
@@ -194,6 +265,15 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     gold: 25,
     xp: 30,
     unlocked: (s) => s.storePurchases >= 1,
+  },
+  {
+    id: "evo-stone-buy",
+    name: "Stone Shopper",
+    description: "Buy an Evolution Stone from the store.",
+    icon: "💎",
+    gold: 40,
+    xp: 50,
+    unlocked: (s) => Boolean(s.evoStoneBuyDate),
   },
   {
     id: "gift-friend",

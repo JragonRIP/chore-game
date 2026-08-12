@@ -52,6 +52,15 @@ export function todayKey(d = new Date()): string {
   return `${y}-${m}-${day}`;
 }
 
+/** Monday of the current week as YYYY-MM-DD (local time). */
+export function weekKey(d = new Date()): string {
+  const date = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const day = date.getDay(); // 0 Sun … 6 Sat
+  const diff = day === 0 ? -6 : 1 - day;
+  date.setDate(date.getDate() + diff);
+  return todayKey(date);
+}
+
 export function xpToNextLevel(level: number): number {
   const curve = [100, 120, 150, 180, 220, 270, 330, 400, 480, 570];
   if (level <= curve.length) return curve[level - 1]!;
@@ -139,6 +148,9 @@ export function createInitialState(): GameState {
     xpBottles: emptyXpBottles(),
     petTreats: emptyPetTreats(),
     evolutionStones: 0,
+    evoStoneBuyDate: null,
+    weeklyQuests: 0,
+    weeklyQuestWeek: null,
     streakDays: 0,
     streakDate: null,
     streakBest: 0,
@@ -265,6 +277,14 @@ export function normalizeState(raw: unknown): GameState {
       typeof r.evolutionStones === "number" && r.evolutionStones > 0
         ? Math.floor(r.evolutionStones)
         : 0,
+    evoStoneBuyDate:
+      typeof r.evoStoneBuyDate === "string" ? r.evoStoneBuyDate : null,
+    weeklyQuests:
+      typeof r.weeklyQuests === "number" && r.weeklyQuests > 0
+        ? Math.floor(r.weeklyQuests)
+        : 0,
+    weeklyQuestWeek:
+      typeof r.weeklyQuestWeek === "string" ? r.weeklyQuestWeek : null,
     streakDays: asCount(r.streakDays),
     streakDate: typeof r.streakDate === "string" ? r.streakDate : null,
     streakBest: asCount(r.streakBest),
@@ -288,6 +308,15 @@ export function normalizeState(raw: unknown): GameState {
       completedToday: [],
       completedDate: today,
       activeQuests: [],
+    };
+  }
+
+  const week = weekKey();
+  if (next.weeklyQuestWeek !== week) {
+    next = {
+      ...next,
+      weeklyQuests: 0,
+      weeklyQuestWeek: week,
     };
   }
 

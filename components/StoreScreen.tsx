@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { STORE_CHESTS, getDailyStoreGear } from "@/lib/gear";
-import { getDailyStorePets } from "@/lib/pets";
+import { EVO_STONE_STORE_PRICE, getDailyStorePets } from "@/lib/pets";
 import { STORE_PET_TREATS } from "@/lib/petTreats";
 import { STORE_XP_BOTTLES } from "@/lib/xpBottles";
 import { todayKey } from "@/lib/math";
@@ -19,6 +19,7 @@ export function StoreScreen({
   onBuyChest,
   onBuyXpBottle,
   onBuyPetTreat,
+  onBuyEvoStone,
   onBuyGear,
   onBuyPet,
 }: {
@@ -26,6 +27,7 @@ export function StoreScreen({
   onBuyChest: (kind: "common" | "legendary") => void;
   onBuyXpBottle: (id: XpBottleId) => void;
   onBuyPetTreat: (id: PetTreatId) => void;
+  onBuyEvoStone: () => void;
   onBuyGear: (id: GearId) => void;
   onBuyPet: (id: PetId) => void;
 }) {
@@ -35,6 +37,7 @@ export function StoreScreen({
     [state.petsUnlocked, day],
   );
   const dailyGear = useMemo(() => getDailyStoreGear(day), [day]);
+  const stoneBoughtToday = state.evoStoneBuyDate === day;
 
   return (
     <div className="mx-auto w-full max-w-lg px-3 pb-5 pt-4">
@@ -133,6 +136,35 @@ export function StoreScreen({
               </button>
             </article>
           ))}
+
+          <article className="surface-strong flex flex-col items-center p-3 text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-gradient-to-br from-violet-100 to-amber-50 text-4xl">
+              💎
+            </div>
+            <h4 className="mt-1 font-display text-sm text-ink">
+              Evolution Stone
+            </h4>
+            <p className="text-[10px] font-semibold text-violet-800">
+              {stoneBoughtToday ? "Sold out today" : "1 per day · Pets evolve"}
+            </p>
+            <button
+              type="button"
+              disabled={
+                stoneBoughtToday || state.gold < EVO_STONE_STORE_PRICE
+              }
+              onClick={onBuyEvoStone}
+              className="btn btn-primary mt-2 min-h-10 w-full gap-1 text-xs"
+            >
+              {stoneBoughtToday ? (
+                "Come back tomorrow"
+              ) : (
+                <>
+                  <GoldCoin size={16} />
+                  {EVO_STONE_STORE_PRICE}
+                </>
+              )}
+            </button>
+          </article>
         </div>
       </div>
 

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { ActiveQuestSheet } from "@/components/ActiveQuestSheet";
 import { Armory } from "@/components/Armory";
 import { BottomNav } from "@/components/BottomNav";
+import { CollectionBook } from "@/components/CollectionBook";
 import { AchievementsPanel } from "@/components/AchievementsPanel";
 import { FriendsPanel } from "@/components/FriendsPanel";
 import { StreakModal } from "@/components/StreakModal";
@@ -33,6 +34,7 @@ export function GameApp() {
   const [openQuestId, setOpenQuestId] = useState<QuestId | null>(null);
   const [friendsOpen, setFriendsOpen] = useState(false);
   const [achievementsOpen, setAchievementsOpen] = useState(false);
+  const [collectionOpen, setCollectionOpen] = useState(false);
 
   const online = useOnline({
     state: g.state,
@@ -85,6 +87,7 @@ export function GameApp() {
         friendsBadge={friendsBadge}
         onAchievements={() => setAchievementsOpen(true)}
         achievementsBadge={unclaimedAchievementCount(g.state)}
+        onCollection={() => setCollectionOpen(true)}
         onlineActive={Boolean(online.player)}
       />
 
@@ -129,6 +132,7 @@ export function GameApp() {
             onBuyChest={g.buyChest}
             onBuyXpBottle={g.buyXpBottle}
             onBuyPetTreat={g.buyPetTreat}
+            onBuyEvoStone={g.buyEvoStone}
             onBuyGear={g.buyGear}
             onBuyPet={g.buyPet}
           />
@@ -235,6 +239,12 @@ export function GameApp() {
         onClose={() => setAchievementsOpen(false)}
         state={g.state}
         onClaim={g.claimAchievement}
+      />
+
+      <CollectionBook
+        open={collectionOpen}
+        onClose={() => setCollectionOpen(false)}
+        state={g.state}
       />
     </div>
   );

@@ -55,6 +55,9 @@ export const EVOLVE_LEVEL: Record<1 | 2, number> = {
 export const EVO_STONE_CHANCE_NORMAL = 0.02;
 export const EVO_STONE_CHANCE_LEGENDARY = 0.09;
 
+/** Store price; one purchase per calendar day. */
+export const EVO_STONE_STORE_PRICE = 300;
+
 /** Base always-on bonuses by rarity (premium spike vs a single gear piece). */
 const BASE_BY_RARITY: Record<
   Rarity,

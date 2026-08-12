@@ -17,12 +17,14 @@ import {
   questCooldownRemainingMs,
   rollChestLoot,
   todayKey,
+  weekKey,
   xpToNextLevel,
 } from "@/lib/math";
 import {
   applyPetXpGain,
   canEvolvePet,
   defaultPetProgress,
+  EVO_STONE_STORE_PRICE,
   evolveHintsFromLevels,
   familiarFromName,
   getPetProgress,
@@ -276,6 +278,8 @@ export function useGameState() {
         streakDate: streak.streakDate,
         streakBest: streak.streakBest,
         questsCompleted: s.questsCompleted + 1,
+        weeklyQuests: (s.weeklyQuestWeek === weekKey() ? s.weeklyQuests : 0) + 1,
+        weeklyQuestWeek: weekKey(),
         evolveHintSeen: {
           adult:
             Boolean(s.evolveHintSeen?.adult) ||
@@ -453,6 +457,22 @@ export function useGameState() {
           ...bag,
           [treatId]: (bag[treatId] ?? 0) + 1,
         },
+        storePurchases: s.storePurchases + 1,
+      };
+    });
+  }, []);
+
+  const buyEvoStone = useCallback(() => {
+    setState((s) => {
+      if (!s) return s;
+      const today = todayKey();
+      if (s.evoStoneBuyDate === today) return s;
+      if (s.gold < EVO_STONE_STORE_PRICE) return s;
+      return {
+        ...s,
+        gold: s.gold - EVO_STONE_STORE_PRICE,
+        evolutionStones: (s.evolutionStones ?? 0) + 1,
+        evoStoneBuyDate: today,
         storePurchases: s.storePurchases + 1,
       };
     });
@@ -853,6 +873,7 @@ export function useGameState() {
     buyXpBottle,
     useXpBottle,
     buyPetTreat,
+    buyEvoStone,
     feedPetTreat,
     buyGear,
     buyPet,
