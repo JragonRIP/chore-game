@@ -55,8 +55,7 @@ export function GameApp() {
     return <HeroCreate onCreate={g.createHero} />;
   }
 
-  const handleStart = (id: QuestId) => {
-    g.startQuest(id);
+  const handleOpen = (id: QuestId) => {
     setOpenQuestId(id);
   };
 
@@ -86,8 +85,7 @@ export function GameApp() {
         {g.tab === "quest" && (
           <QuestBoard
             state={g.state}
-            onStart={handleStart}
-            onOpenActive={setOpenQuestId}
+            onOpen={handleOpen}
           />
         )}
         {g.tab === "vault" && (
@@ -131,12 +129,13 @@ export function GameApp() {
 
       <BottomNav tab={g.tab} onChange={g.setTab} />
 
-      {openQuestId && activeForSheet && (
+      {openQuestId && (
         <ActiveQuestSheet
           questId={openQuestId}
           active={activeForSheet}
           state={g.state}
           onClose={() => setOpenQuestId(null)}
+          onStart={g.startQuest}
           onComplete={handleComplete}
         />
       )}

@@ -15,12 +15,10 @@ import type { GameState, QuestCategory, QuestId } from "@/lib/types";
 
 export function QuestBoard({
   state,
-  onStart,
-  onOpenActive,
+  onOpen,
 }: {
   state: GameState;
-  onStart: (id: QuestId) => void;
-  onOpenActive: (id: QuestId) => void;
+  onOpen: (id: QuestId) => void;
 }) {
   const [category, setCategory] = useState<(typeof QUEST_CATEGORIES)[number]>(
     "All Quests",
@@ -70,8 +68,9 @@ export function QuestBoard({
           return (
             <article
               key={quest.id}
-              className="surface-strong overflow-hidden rise-in"
+              className="surface-strong cursor-pointer overflow-hidden rise-in"
               style={{ animationDelay: `${Math.min(i, 6) * 40}ms` }}
+              onClick={() => onOpen(quest.id)}
             >
               <div className="relative flex items-center justify-center bg-gradient-to-br from-sky-2 via-white to-teal/10 py-7">
                 <span className="text-5xl drop-shadow-sm">{quest.icon}</span>
@@ -124,7 +123,10 @@ export function QuestBoard({
                   ) : active ? (
                     <button
                       type="button"
-                      onClick={() => onOpenActive(quest.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpen(quest.id);
+                      }}
                       className="btn btn-secondary w-full"
                     >
                       Open Quest Card
@@ -132,12 +134,13 @@ export function QuestBoard({
                   ) : (
                     <button
                       type="button"
-                      onClick={() => onStart(quest.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpen(quest.id);
+                      }}
                       className="btn btn-primary w-full"
                     >
-                      {doneCount > 0 && max > 1
-                        ? "Start Again"
-                        : "Start Quest"}
+                      {doneCount > 0 && max > 1 ? "View Again" : "View Quest"}
                     </button>
                   )}
                 </div>
