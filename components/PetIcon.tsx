@@ -17,13 +17,14 @@ export function PetSprite({
   size?: number;
   className?: string;
 }) {
+  const grounded = familiar === "caliper";
   return (
     <Image
       src={familiar ? FAMILIAR_PET_IMAGES[familiar] : PET_IMAGES[species]}
       alt=""
       width={size}
       height={size}
-      className={`object-contain drop-shadow-md ${className}`}
+      className={`object-contain drop-shadow-md ${grounded ? "object-bottom" : ""} ${className}`}
       style={{ width: size, height: size }}
       unoptimized
     />
