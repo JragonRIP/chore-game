@@ -142,9 +142,6 @@ export const STORE_PETS = ALL_PETS.filter(
       p.rarity === "enchanted"),
 );
 
-/** ~40% of days have no companion offers. */
-const STORE_PET_APPEAR_CHANCE = 0.6;
-
 function hashSeed(input: string): number {
   let h = 2166136261;
   for (let i = 0; i < input.length; i++) {
@@ -164,24 +161,26 @@ function mulberry32(seed: number): () => number {
   };
 }
 
-/**
- * Daily rotating companion shelf. Some days empty; otherwise 1–2 offers.
- * Deterministic for a given date so the shelf stays stable all day.
- */
-export function getDailyStorePets(dateKey: string): PetDef[] {
-  const rand = mulberry32(hashSeed(`pets-store-${dateKey}`));
-  if (rand() >= STORE_PET_APPEAR_CHANCE) return [];
-
-  const pool = [...STORE_PETS];
+function shuffleWith<T>(items: T[], rand: () => number): T[] {
+  const pool = [...items];
   for (let i = pool.length - 1; i > 0; i--) {
     const j = Math.floor(rand() * (i + 1));
     const tmp = pool[i]!;
     pool[i] = pool[j]!;
     pool[j] = tmp;
   }
+  return pool;
+}
 
-  const count = rand() < 0.55 ? 1 : 2;
-  return pool.slice(0, count);
+/**
+ * Daily rotating companion shelf — always at least one new visitor.
+ * Deterministic for a given date so the shelf stays stable all day.
+ */
+export function getDailyStorePets(dateKey: string): PetDef[] {
+  const rand = mulberry32(hashSeed(`pets-store-v2-${dateKey}`));
+  const pool = shuffleWith(STORE_PETS, rand);
+  const count = rand() < 0.4 ? 2 : 1;
+  return pool.slice(0, Math.min(count, pool.length));
 }
 
 export function computePetQuestExtras(
@@ -233,15 +232,15 @@ export function getPetProgress(
   };
 }
 
-/** Whether this quest can grant XP to the equipped pet species. */
+/**
+ * Equipped pets always earn XP from chores.
+ * Category still matters for trait bonuses (see computePetQuestExtras).
+ */
 export function petGainsXpFromQuest(
-  species: PetSpecies,
-  category: QuestCategory,
+  _species: PetSpecies,
+  _category: QuestCategory,
 ): boolean {
-  if (species === "lizard") return category === "Cleaning";
-  if (species === "wolf") return category === "Outdoor";
-  // Lion & dragon: Pets chores only
-  return category === "Pets";
+  return true;
 }
 
 export function applyPetXpGain(

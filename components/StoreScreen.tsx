@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { STORE_CHESTS, STORE_GEAR } from "@/lib/gear";
+import { STORE_CHESTS, getDailyStoreGear } from "@/lib/gear";
 import { getDailyStorePets } from "@/lib/pets";
 import { STORE_PET_TREATS } from "@/lib/petTreats";
 import { STORE_XP_BOTTLES } from "@/lib/xpBottles";
@@ -29,10 +29,12 @@ export function StoreScreen({
   onBuyGear: (id: GearId) => void;
   onBuyPet: (id: PetId) => void;
 }) {
+  const day = todayKey();
   const dailyPets = useMemo(
-    () => (state.petsUnlocked ? getDailyStorePets(todayKey()) : []),
-    [state.petsUnlocked],
+    () => (state.petsUnlocked ? getDailyStorePets(day) : []),
+    [state.petsUnlocked, day],
   );
+  const dailyGear = useMemo(() => getDailyStoreGear(day), [day]);
 
   return (
     <div className="mx-auto w-full max-w-lg px-3 pb-5 pt-4">
@@ -134,60 +136,69 @@ export function StoreScreen({
         </div>
       </div>
 
-      {state.petsUnlocked && dailyPets.length > 0 && (
+      {state.petsUnlocked && (
         <>
           <h3 className="mt-6 font-display text-lg text-ink">Companions</h3>
           <p className="mt-0.5 text-xs text-ink-soft">
-            Today&apos;s visiting sidekicks — check back another day for more.
-            Mythic & Relic are chest-only.
+            Today&apos;s visiting sidekicks — a new guest each day. Mythic &amp;
+            Relic are chest-only.
           </p>
           <div className="mt-2.5 flex flex-col gap-2.5">
-            {dailyPets.map((pet) => {
-              const owned = state.ownedPets.includes(pet.id);
-              const canBuy =
-                !owned && state.gold >= (pet.storePrice ?? Infinity);
-              return (
-                <div key={pet.id} className="surface flex items-center gap-3 p-3">
-                  <PetIcon pet={pet} size={52} />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-display text-sm text-ink">
-                      {pet.name}
-                    </p>
-                    <div className="mt-1 flex flex-wrap gap-1.5">
-                      <RarityBadge rarity={pet.rarity} />
-                      <span className="text-xs font-semibold text-emerald-700">
-                        +{pet.xpBonusPct}% XP
-                      </span>
+            {dailyPets.length === 0 ? (
+              <p className="text-sm text-ink-soft">
+                No visitors today — check back tomorrow.
+              </p>
+            ) : (
+              dailyPets.map((pet) => {
+                const owned = state.ownedPets.includes(pet.id);
+                const canBuy =
+                  !owned && state.gold >= (pet.storePrice ?? Infinity);
+                return (
+                  <div key={pet.id} className="surface flex items-center gap-3 p-3">
+                    <PetIcon pet={pet} size={52} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-display text-sm text-ink">
+                        {pet.name}
+                      </p>
+                      <div className="mt-1 flex flex-wrap gap-1.5">
+                        <RarityBadge rarity={pet.rarity} />
+                        <span className="text-xs font-semibold text-emerald-700">
+                          +{pet.xpBonusPct}% XP
+                        </span>
+                      </div>
+                      <p className="mt-1 text-[10px] font-semibold text-ink-soft">
+                        {pet.traitLabel}
+                      </p>
                     </div>
-                    <p className="mt-1 text-[10px] font-semibold text-ink-soft">
-                      {pet.traitLabel}
-                    </p>
+                    {owned ? (
+                      <span className="text-xs font-bold text-emerald-700">
+                        Owned
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={!canBuy}
+                        onClick={() => onBuyPet(pet.id)}
+                        className="btn btn-primary min-h-10 gap-1 px-3 text-xs"
+                      >
+                        <GoldCoin size={14} />
+                        {pet.storePrice}
+                      </button>
+                    )}
                   </div>
-                  {owned ? (
-                    <span className="text-xs font-bold text-emerald-700">
-                      Owned
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      disabled={!canBuy}
-                      onClick={() => onBuyPet(pet.id)}
-                      className="btn btn-primary min-h-10 gap-1 px-3 text-xs"
-                    >
-                      <GoldCoin size={14} />
-                      {pet.storePrice}
-                    </button>
-                  )}
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         </>
       )}
 
       <h3 className="mt-6 font-display text-lg text-ink">Gear Shelf</h3>
+      <p className="mt-0.5 text-xs text-ink-soft">
+        Today&apos;s stock — shelves restock with new pieces each day.
+      </p>
       <div className="mt-2.5 flex flex-col gap-2.5">
-        {STORE_GEAR.map((g) => {
+        {dailyGear.map((g) => {
           const owned = state.ownedGear.includes(g.id);
           const canBuy = !owned && state.gold >= (g.storePrice ?? Infinity);
           return (

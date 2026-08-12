@@ -107,23 +107,39 @@ export function useGameState() {
     if (!state?.hero || dailyChecked.current) return;
     dailyChecked.current = true;
     const today = todayKey();
-    if (state.freeChestDate === today) return;
+    // Prefer disk — covers Strict Mode remounts and in-flight cloud sync.
+    const disk = loadGame();
+    if (state.freeChestDate === today || disk.freeChestDate === today) {
+      if (state.freeChestDate !== today && disk.freeChestDate === today) {
+        setState((s) =>
+          s ? { ...s, freeChestDate: today } : s,
+        );
+      }
+      return;
+    }
+
     const gift: VaultChest = {
       id: makeChestId(),
       type: "normal",
       reason: "Daily Wooden Chest",
       earnedAt: Date.now(),
     };
-    setState((s) =>
-      s
-        ? {
-            ...s,
-            freeChestDate: today,
-            vaultChests: [gift, ...s.vaultChests],
-          }
-        : s,
-    );
-    setDailyGift(gift);
+    let granted = false;
+    setState((s) => {
+      if (!s || s.freeChestDate === today) return s;
+      granted = true;
+      const next = {
+        ...s,
+        freeChestDate: today,
+        vaultChests: [gift, ...s.vaultChests],
+      };
+      // Persist immediately so cloud sync can't miss today's claim.
+      saveGame(next);
+      return next;
+    });
+    queueMicrotask(() => {
+      if (granted) setDailyGift(gift);
+    });
   }, [state]);
 
   const phase: ScreenPhase = !state

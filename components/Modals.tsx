@@ -349,6 +349,12 @@ export function ParentPanel({
   const [goldInput, setGoldInput] = useState("25");
   const [confirmReset, setConfirmReset] = useState(false);
   const [editId, setEditId] = useState<QuestId | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    window.setTimeout(() => setToast(null), 2200);
+  };
 
   const tryPin = () => {
     if (pin === PARENT_PIN) {
@@ -365,12 +371,14 @@ export function ParentPanel({
     const n = Number(xpInput);
     if (!Number.isFinite(n) || n <= 0) return;
     onGrant(n, 0);
+    showToast(`Added ${Math.floor(n)} XP`);
   };
 
   const grantGold = () => {
     const n = Number(goldInput);
     if (!Number.isFinite(n) || n <= 0) return;
     onGrant(0, n);
+    showToast(`Added ${Math.floor(n)} gold`);
   };
 
   const editing = editId ? QUESTS.find((q) => q.id === editId) : null;
@@ -522,6 +530,12 @@ export function ParentPanel({
           Level {state.level} · {state.xp} XP · {state.gold} gold
         </p>
 
+        {toast && (
+          <p className="mt-3 rounded-xl bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">
+            {toast}
+          </p>
+        )}
+
         <div className="mt-4 rounded-2xl bg-sky-1/80 p-3">
           <p className="text-xs font-bold uppercase tracking-wide text-ink-soft">
             Add XP
@@ -548,7 +562,10 @@ export function ParentPanel({
               <button
                 key={n}
                 type="button"
-                onClick={() => onGrant(n, 0)}
+                onClick={() => {
+                  onGrant(n, 0);
+                  showToast(`Added ${n} XP`);
+                }}
                 className="chip border-emerald-200 bg-emerald-50 text-emerald-700"
               >
                 +{n} XP
@@ -584,7 +601,10 @@ export function ParentPanel({
               <button
                 key={n}
                 type="button"
-                onClick={() => onGrant(0, n)}
+                onClick={() => {
+                  onGrant(0, n);
+                  showToast(`Added ${n} gold`);
+                }}
                 className="chip border-amber-200 bg-amber-100 text-amber-800"
               >
                 +{n}

@@ -5,6 +5,7 @@ import {
   usernameToEmail,
 } from "@/lib/supabase";
 import { normalizeState } from "@/lib/math";
+import { loadGame } from "@/lib/storage";
 
 export type PlayerRow = {
   id: string;
@@ -153,6 +154,16 @@ export async function pullCloudSave(): Promise<GameState | null> {
   return normalizeState(raw);
 }
 
+/** Prefer the later calendar date string (YYYY-MM-DD). */
+function laterDate(
+  a: string | null | undefined,
+  b: string | null | undefined,
+): string | null {
+  if (!a) return b ?? null;
+  if (!b) return a;
+  return a >= b ? a : b;
+}
+
 /** First login: keep local progress if cloud is empty. */
 export async function migrateOrLoadCloudSave(
   local: GameState,
@@ -162,7 +173,15 @@ export async function migrateOrLoadCloudSave(
     await pushCloudSave(local);
     return local;
   }
-  return cloud;
+  // Disk may have a newer daily-chest claim than the in-memory `local`
+  // snapshot if the daily gift ran while this fetch was in flight.
+  const disk = loadGame();
+  const freeChestDate = laterDate(
+    laterDate(local.freeChestDate, disk.freeChestDate),
+    cloud.freeChestDate,
+  );
+  if (freeChestDate === cloud.freeChestDate) return cloud;
+  return { ...cloud, freeChestDate };
 }
 
 export async function listFriends(): Promise<FriendEntry[]> {
