@@ -8,7 +8,7 @@ import { RarityBadge } from "@/components/PixelGearIcon";
 import {
   displayPetName,
   getPetProgress,
-  isMapleName,
+  familiarFromName,
   MAX_PET_LEVEL,
   PET_BY_ID,
   PET_TRAIT_LABELS,
@@ -121,7 +121,7 @@ export function PetsScreen({
             <div className="absolute bottom-2 right-[12%] loot-pop">
               <PetSprite
                 species={equipped.species}
-                maple={isMapleName(state.petNames?.[equipped.id])}
+                familiar={familiarFromName(state.petNames?.[equipped.id])}
                 size={72}
               />
             </div>
@@ -240,7 +240,7 @@ export function PetsScreen({
             <div key={pet.id} className="surface flex items-center gap-3 p-3">
               <PetIcon
                 pet={pet}
-                maple={isMapleName(state.petNames?.[pet.id])}
+                familiar={familiarFromName(state.petNames?.[pet.id])}
                 size={52}
               />
               <div className="min-w-0 flex-1">

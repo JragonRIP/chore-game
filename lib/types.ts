@@ -18,6 +18,7 @@ export type AvatarId =
   | "berserker";
 export type ChestType = "normal" | "legendary";
 export type PetSpecies = "lizard" | "wolf" | "lion" | "dragon";
+export type FamiliarId = "maple" | "caliper";
 export type XpBottleId = "xp-sip" | "xp-flask";
 export type PetTreatId = "treat-nibble" | "treat-feast";
 
@@ -153,8 +154,8 @@ export interface GameState {
   petProgress: Record<string, PetProgress>;
   /** Optional nicknames for owned pets. */
   petNames: Record<string, string>;
-  /** Shown the Maple familiar-friend popup once. */
-  mapleRevealSeen: boolean;
+  /** Shown the familiar-friend popup once per nickname (Maple, Caliper). */
+  familiarRevealSeen: Record<FamiliarId, boolean>;
   /** Parent edits to catalog quests. */
   questOverrides: Record<string, QuestOverride>;
   activeQuests: ActiveQuest[];

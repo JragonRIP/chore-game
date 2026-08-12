@@ -11,7 +11,7 @@ import {
   CelebrationModal,
   ChestOpenModal,
   DailyChestGift,
-  MapleRevealModal,
+  FamiliarRevealModal,
   ParentPanel,
   PetsUnlockModal,
 } from "@/components/Modals";
@@ -164,18 +164,21 @@ export function GameApp() {
         <PetsUnlockModal onDismiss={g.dismissPetsUnlock} />
       )}
 
-      {g.mapleRevealOpen &&
+      {g.familiarReveal &&
         !g.celebration &&
         !g.openingChest &&
         !g.petsUnlockOpen && (
-          <MapleRevealModal onDismiss={g.dismissMapleReveal} />
+          <FamiliarRevealModal
+            familiar={g.familiarReveal}
+            onDismiss={g.dismissFamiliarReveal}
+          />
         )}
 
       {g.dailyGift &&
         !g.celebration &&
         !g.openingChest &&
         !g.petsUnlockOpen &&
-        !g.mapleRevealOpen && (
+        !g.familiarReveal && (
           <DailyChestGift onDismiss={g.dismissDailyGift} />
         )}
 

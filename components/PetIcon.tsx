@@ -2,24 +2,24 @@
 
 import Image from "next/image";
 import { RARITY_COLORS } from "@/lib/gear";
-import { MAPLE_PET_IMAGE, PET_IMAGES } from "@/lib/petImages";
+import { FAMILIAR_PET_IMAGES, PET_IMAGES } from "@/lib/petImages";
 import { gearPalette } from "@/lib/pixel";
-import type { PetDef, PetSpecies } from "@/lib/types";
+import type { FamiliarId, PetDef, PetSpecies } from "@/lib/types";
 
 export function PetSprite({
   species,
-  maple = false,
+  familiar = null,
   size = 64,
   className = "",
 }: {
   species: PetSpecies;
-  maple?: boolean;
+  familiar?: FamiliarId | null;
   size?: number;
   className?: string;
 }) {
   return (
     <Image
-      src={maple ? MAPLE_PET_IMAGE : PET_IMAGES[species]}
+      src={familiar ? FAMILIAR_PET_IMAGES[familiar] : PET_IMAGES[species]}
       alt=""
       width={size}
       height={size}
@@ -32,11 +32,11 @@ export function PetSprite({
 
 export function PetIcon({
   pet,
-  maple = false,
+  familiar = null,
   size = 48,
 }: {
   pet: PetDef;
-  maple?: boolean;
+  familiar?: FamiliarId | null;
   size?: number;
 }) {
   const border = RARITY_COLORS[pet.rarity];
@@ -63,7 +63,7 @@ export function PetIcon({
       }}
       aria-hidden
     >
-      <PetSprite species={pet.species} maple={maple} size={artSize} />
+      <PetSprite species={pet.species} familiar={familiar} size={artSize} />
       {pet.rarity === "relic" && (
         <span className="absolute -right-1 -top-1 text-xs text-amber-500">★</span>
       )}

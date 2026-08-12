@@ -22,8 +22,8 @@ import {
 import {
   applyPetXpGain,
   defaultPetProgress,
+  familiarFromName,
   getPetProgress,
-  isMapleName,
   MAX_PET_LEVEL,
   PET_BY_ID,
 } from "@/lib/pets";
@@ -32,6 +32,7 @@ import { getQuestById } from "@/lib/questResolve";
 import { loadGame, saveGame } from "@/lib/storage";
 import type {
   AvatarId,
+  FamiliarId,
   GameState,
   GearId,
   LootEvent,
@@ -71,7 +72,9 @@ export function useGameState() {
   const [dailyGift, setDailyGift] = useState<VaultChest | null>(null);
   const [parentOpen, setParentOpen] = useState(false);
   const [petsUnlockOpen, setPetsUnlockOpen] = useState(false);
-  const [mapleRevealOpen, setMapleRevealOpen] = useState(false);
+  const [familiarReveal, setFamiliarReveal] = useState<FamiliarId | null>(
+    null,
+  );
   const levelTaps = useRef(0);
   const saveReady = useRef(false);
   const dailyChecked = useRef(false);
@@ -528,20 +531,25 @@ export function useGameState() {
       } else {
         names[petId] = trimmed;
       }
-      const revealing = isMapleName(trimmed) && !s.mapleRevealSeen;
-      if (revealing) {
-        queueMicrotask(() => setMapleRevealOpen(true));
+      const familiar = familiarFromName(trimmed);
+      const revealing = Boolean(
+        familiar && !s.familiarRevealSeen?.[familiar],
+      );
+      if (revealing && familiar) {
+        queueMicrotask(() => setFamiliarReveal(familiar));
       }
       return {
         ...s,
         petNames: names,
-        mapleRevealSeen: s.mapleRevealSeen || revealing,
+        familiarRevealSeen: revealing && familiar
+          ? { ...s.familiarRevealSeen, [familiar]: true }
+          : s.familiarRevealSeen,
       };
     });
   }, []);
 
-  const dismissMapleReveal = useCallback(() => {
-    setMapleRevealOpen(false);
+  const dismissFamiliarReveal = useCallback(() => {
+    setFamiliarReveal(null);
   }, []);
 
   const parentGrant = useCallback((xpAmount: number, goldAmount: number) => {
@@ -613,7 +621,7 @@ export function useGameState() {
     setDailyGift(null);
     setParentOpen(false);
     setPetsUnlockOpen(false);
-    setMapleRevealOpen(false);
+    setFamiliarReveal(null);
     pendingPetsUnlock.current = false;
     dailyChecked.current = false;
     saveGame(fresh);
@@ -655,8 +663,8 @@ export function useGameState() {
     equipPet,
     unequipPet,
     renamePet,
-    mapleRevealOpen,
-    dismissMapleReveal,
+    familiarReveal,
+    dismissFamiliarReveal,
     parentGrant,
     parentForceUnlockPets,
     parentUpdateQuest,

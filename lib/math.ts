@@ -14,6 +14,7 @@ import {
   PET_DUPLICATE_XP,
   applyPetXpGain,
   computePetQuestExtras,
+  emptyFamiliarRevealSeen,
   getPetProgress,
   normalizePetNames,
   petGainsXpFromQuest,
@@ -115,7 +116,7 @@ export function createInitialState(): GameState {
     petsUnlocked: false,
     petProgress: {},
     petNames: {},
-    mapleRevealSeen: false,
+    familiarRevealSeen: emptyFamiliarRevealSeen(),
     questOverrides: {},
     activeQuests: [],
     completedToday: [],
@@ -189,7 +190,20 @@ export function normalizeState(raw: unknown): GameState {
     petsUnlocked: Boolean(r.petsUnlocked) || ownedPets.length > 0,
     petProgress,
     petNames: normalizePetNames(r.petNames, ownedPets),
-    mapleRevealSeen: Boolean(r.mapleRevealSeen),
+    familiarRevealSeen: {
+      maple:
+        Boolean(r.mapleRevealSeen) ||
+        Boolean(
+          r.familiarRevealSeen &&
+            typeof r.familiarRevealSeen === "object" &&
+            (r.familiarRevealSeen as Record<string, unknown>).maple,
+        ),
+      caliper: Boolean(
+        r.familiarRevealSeen &&
+          typeof r.familiarRevealSeen === "object" &&
+          (r.familiarRevealSeen as Record<string, unknown>).caliper,
+      ),
+    },
     questOverrides,
     activeQuests,
     completedToday: Array.isArray(r.completedToday)

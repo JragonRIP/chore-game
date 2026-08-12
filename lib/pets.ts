@@ -1,4 +1,5 @@
 import type {
+  FamiliarId,
   PetDef,
   PetProgress,
   PetSpecies,
@@ -274,8 +275,22 @@ export function applyPetXpGain(
   };
 }
 
-export function isMapleName(name: string | null | undefined): boolean {
-  return (name ?? "").trim().toLowerCase() === "maple";
+export const FAMILIAR_LABELS: Record<FamiliarId, string> = {
+  maple: "Maple",
+  caliper: "Caliper",
+};
+
+export function emptyFamiliarRevealSeen(): Record<FamiliarId, boolean> {
+  return { maple: false, caliper: false };
+}
+
+export function familiarFromName(
+  name: string | null | undefined,
+): FamiliarId | null {
+  const n = (name ?? "").trim().toLowerCase();
+  if (n === "maple") return "maple";
+  if (n === "caliper") return "caliper";
+  return null;
 }
 
 export function displayPetName(

@@ -1,4 +1,4 @@
-import type { PetSpecies } from "./types";
+import type { FamiliarId, PetSpecies } from "./types";
 
 export const PET_IMAGES: Record<PetSpecies, string> = {
   lizard: "/pets/lizard.png",
@@ -7,4 +7,7 @@ export const PET_IMAGES: Record<PetSpecies, string> = {
   dragon: "/pets/dragon.png",
 };
 
-export const MAPLE_PET_IMAGE = "/pets/maple.png";
+export const FAMILIAR_PET_IMAGES: Record<FamiliarId, string> = {
+  maple: "/pets/maple.png",
+  caliper: "/pets/caliper.png",
+};

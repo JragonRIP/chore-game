@@ -15,7 +15,7 @@ import { GoldCoin } from "@/components/GoldCoin";
 import { HeroSprite } from "@/components/HeroSprite";
 import { PetIcon, PetSprite } from "@/components/PetIcon";
 import { GearIcon, RarityBadge } from "@/components/PixelGearIcon";
-import { isMapleName, PET_BY_ID } from "@/lib/pets";
+import { familiarFromName, PET_BY_ID } from "@/lib/pets";
 import type { GameState, GearDef, GearId, Slot } from "@/lib/types";
 
 const LEFT_SLOTS: Slot[] = ["helmet", "chestplate", "leggings"];
@@ -66,7 +66,7 @@ export function Armory({
           {equippedPet ? (
             <PetIcon
               pet={equippedPet}
-              maple={isMapleName(state.petNames?.[equippedPet.id])}
+              familiar={familiarFromName(state.petNames?.[equippedPet.id])}
               size={40}
             />
           ) : (
@@ -122,7 +122,7 @@ export function Armory({
               <div className="absolute bottom-1 right-1">
                 <PetSprite
                   species={equippedPet.species}
-                  maple={isMapleName(state.petNames?.[equippedPet.id])}
+                  familiar={familiarFromName(state.petNames?.[equippedPet.id])}
                   size={56}
                 />
               </div>
