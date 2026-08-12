@@ -230,6 +230,24 @@ export function ChestOpenModal({
                 </div>
               </>
             )}
+            {loot.kind === "evo-stone" && (
+              <>
+                <p className="text-xs font-bold uppercase tracking-wide text-violet-700">
+                  Rare Find!
+                </p>
+                <div className="mt-4 flex flex-col items-center gap-2 loot-pop">
+                  <div className="flex h-24 w-24 items-center justify-center rounded-3xl bg-gradient-to-br from-violet-100 to-amber-50 text-5xl shadow-sm">
+                    💎
+                  </div>
+                  <p className="font-display text-lg text-ink">
+                    Evolution Stone
+                  </p>
+                  <p className="text-sm text-ink-soft">
+                    Use on the Pets tab to evolve a companion.
+                  </p>
+                </div>
+              </>
+            )}
             {loot.bonusCoins > 0 && (
               <div className="mt-3 flex items-center justify-center gap-1.5 text-sm font-bold text-amber-800">
                 <GoldCoin size={16} />+{loot.bonusCoins} gold

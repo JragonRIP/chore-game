@@ -119,6 +119,7 @@ export function GameApp() {
             onUnequip={g.unequipPet}
             onFeedTreat={g.feedPetTreat}
             onRename={g.renamePet}
+            onEvolve={g.evolvePet}
           />
         )}
         {g.tab === "store" && (

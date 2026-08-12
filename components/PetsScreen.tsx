@@ -6,13 +6,18 @@ import { PetIcon, PetSprite } from "@/components/PetIcon";
 import { PetTreatIcon } from "@/components/PetTreatIcon";
 import { RarityBadge } from "@/components/PixelGearIcon";
 import {
+  canEvolvePet,
   displayPetName,
+  EVOLVE_LEVEL,
   getPetProgress,
   familiarFromName,
   MAX_PET_LEVEL,
+  nextPetStage,
+  petDisplayCatalogName,
   PET_BY_ID,
   PET_TRAIT_LABELS,
   petLevelMultiplier,
+  petStageMultiplier,
   petXpToNextLevel,
 } from "@/lib/pets";
 import { STORE_PET_TREATS } from "@/lib/petTreats";
@@ -24,12 +29,14 @@ export function PetsScreen({
   onUnequip,
   onFeedTreat,
   onRename,
+  onEvolve,
 }: {
   state: GameState;
   onEquip: (id: PetId) => void;
   onUnequip: () => void;
   onFeedTreat: (treatId: PetTreatId, petId: PetId) => void;
   onRename: (id: PetId, name: string) => void;
+  onEvolve: (id: PetId) => void;
 }) {
   const hero = state.hero!;
   const equipped = state.equippedPet
@@ -85,7 +92,8 @@ export function PetsScreen({
   }
 
   const equippedMult = equippedProgress
-    ? petLevelMultiplier(equippedProgress.level)
+    ? petLevelMultiplier(equippedProgress.level) *
+      petStageMultiplier(equippedProgress.stage)
     : 1;
   const equippedXpBonus = equipped
     ? Math.round(equipped.xpBonusPct * equippedMult)
@@ -101,13 +109,30 @@ export function PetsScreen({
     equippedProgress && equippedXpNeeded > 0
       ? Math.min(100, (equippedProgress.xp / equippedXpNeeded) * 100)
       : 100;
+  const stones = state.evolutionStones ?? 0;
+  const equippedCatalogName = equipped
+    ? petDisplayCatalogName(
+        equipped.species,
+        equippedProgress?.stage ?? 1,
+      )
+    : "";
+  const canEvolveEquipped = Boolean(
+    equipped &&
+      equippedProgress &&
+      canEvolvePet(equippedProgress, stones),
+  );
 
   return (
     <div className="mx-auto w-full max-w-lg px-3 pb-5 pt-4">
       <h2 className="font-display text-2xl text-ink">Companions</h2>
       <p className="mt-0.5 text-sm text-ink-soft">
-        Equip one loyal sidekick. Matching chores raise its level.
+        Equip one loyal sidekick. Level up, then evolve with stones.
       </p>
+      {stones > 0 && (
+        <p className="mt-2 rounded-xl bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-800">
+          Evolution Stones ×{stones}
+        </p>
+      )}
 
       <div className="surface-strong mt-4 flex flex-col items-center px-3 py-5">
         <div className="relative flex h-44 w-full max-w-xs items-end justify-center rounded-[2rem] bg-gradient-to-br from-sky-2 to-white ring-1 ring-ink/5 sm:h-52">
@@ -117,11 +142,12 @@ export function PetsScreen({
             size={160}
             showGearBadges={false}
           />
-          {equipped && (
+          {equipped && equippedProgress && (
             <div className="absolute bottom-2 right-[12%] loot-pop">
               <PetSprite
                 species={equipped.species}
                 familiar={familiarFromName(state.petNames?.[equipped.id])}
+                stage={equippedProgress.stage}
                 size={72}
               />
             </div>
@@ -131,12 +157,18 @@ export function PetsScreen({
         {equipped && equippedProgress ? (
           <div className="mt-2 w-full max-w-xs text-center">
             <p className="font-display text-sm text-teal-deep">
-              {displayPetName(equipped.name, state.petNames?.[equipped.id])}
+              {displayPetName(
+                equippedCatalogName,
+                state.petNames?.[equipped.id],
+              )}
             </p>
             <div className="mt-1.5 flex flex-wrap items-center justify-center gap-1.5">
               <RarityBadge rarity={equipped.rarity} />
               <span className="rounded-full bg-teal/15 px-2.5 py-0.5 text-[10px] font-bold text-teal-deep">
                 Pet Lv {equippedProgress.level}
+              </span>
+              <span className="rounded-full bg-violet-50 px-2.5 py-0.5 text-[10px] font-bold text-violet-800">
+                Stage {equippedProgress.stage}
               </span>
               <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700">
                 +{equippedXpBonus}% XP
@@ -168,6 +200,20 @@ export function PetsScreen({
                 />
               </div>
             </div>
+            {canEvolveEquipped && (
+              <button
+                type="button"
+                onClick={() => onEvolve(equipped.id)}
+                className="btn btn-secondary mt-3 min-h-10 w-full text-xs"
+              >
+                Evolve →{" "}
+                {petDisplayCatalogName(
+                  equipped.species,
+                  nextPetStage(equippedProgress.stage) ?? 3,
+                )}{" "}
+                (1 stone)
+              </button>
+            )}
             {selectedDef && selectedCount > 0 && equippedProgress.level < MAX_PET_LEVEL && (
               <button
                 type="button"
@@ -235,12 +281,18 @@ export function PetsScreen({
               : 0;
           const pct =
             needed > 0 ? Math.min(100, (progress.xp / needed) * 100) : 100;
-          const mult = petLevelMultiplier(progress.level);
+          const mult =
+            petLevelMultiplier(progress.level) *
+            petStageMultiplier(progress.stage);
+          const catalogName = petDisplayCatalogName(pet.species, progress.stage);
+          const readyEvolve = canEvolvePet(progress, stones);
+          const nextStage = nextPetStage(progress.stage);
           return (
             <div key={pet.id} className="surface flex items-center gap-3 p-3">
               <PetIcon
                 pet={pet}
                 familiar={familiarFromName(state.petNames?.[pet.id])}
+                stage={progress.stage}
                 size={52}
               />
               <div className="min-w-0 flex-1">
@@ -259,7 +311,7 @@ export function PetsScreen({
                       autoFocus
                       value={renameDraft}
                       onChange={(e) => setRenameDraft(e.target.value)}
-                      placeholder={pet.name}
+                      placeholder={catalogName}
                     />
                     <button
                       type="submit"
@@ -270,13 +322,16 @@ export function PetsScreen({
                   </form>
                 ) : (
                   <p className="truncate font-display text-sm text-ink">
-                    {displayPetName(pet.name, state.petNames?.[pet.id])}
+                    {displayPetName(catalogName, state.petNames?.[pet.id])}
                   </p>
                 )}
                 <div className="mt-1 flex flex-wrap items-center gap-1.5">
                   <RarityBadge rarity={pet.rarity} />
                   <span className="text-[10px] font-bold text-teal-deep">
                     Lv {progress.level}
+                  </span>
+                  <span className="text-[10px] font-bold text-violet-800">
+                    Stage {progress.stage}
                   </span>
                   <span className="text-xs font-semibold text-emerald-700">
                     +{Math.round(pet.xpBonusPct * mult)}% XP
@@ -293,7 +348,9 @@ export function PetsScreen({
                   />
                 </div>
                 <p className="mt-1 text-[10px] font-semibold text-ink-soft">
-                  {pet.traitLabel}
+                  {progress.stage < 3
+                    ? `Evolve at Lv ${EVOLVE_LEVEL[progress.stage as 1 | 2]} · ${pet.traitLabel}`
+                    : pet.traitLabel}
                 </p>
               </div>
               <div className="flex shrink-0 flex-col gap-1.5">
@@ -308,6 +365,15 @@ export function PetsScreen({
                 >
                   {isEquipped ? "Unequip" : "Equip"}
                 </button>
+                {readyEvolve && nextStage && (
+                  <button
+                    type="button"
+                    onClick={() => onEvolve(pet.id)}
+                    className="btn btn-secondary min-h-9 px-3 text-[10px]"
+                  >
+                    Evolve
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => {

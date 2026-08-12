@@ -19,6 +19,9 @@ import {
   normalizePetNames,
   petGainsXpFromQuest,
   petLevelMultiplier,
+  petStageMultiplier,
+  EVO_STONE_CHANCE_LEGENDARY,
+  EVO_STONE_CHANCE_NORMAL,
 } from "./pets";
 import type {
   ActiveQuest,
@@ -133,6 +136,7 @@ export function createInitialState(): GameState {
     freeChestDate: null,
     xpBottles: emptyXpBottles(),
     petTreats: emptyPetTreats(),
+    evolutionStones: 0,
     streakDays: 0,
     streakDate: null,
     streakBest: 0,
@@ -243,6 +247,10 @@ export function normalizeState(raw: unknown): GameState {
         : null,
     xpBottles: normalizeXpBottles(r.xpBottles),
     petTreats: normalizePetTreats(r.petTreats),
+    evolutionStones:
+      typeof r.evolutionStones === "number" && r.evolutionStones > 0
+        ? Math.floor(r.evolutionStones)
+        : 0,
     streakDays: asCount(r.streakDays),
     streakDate: typeof r.streakDate === "string" ? r.streakDate : null,
     streakBest: asCount(r.streakBest),
@@ -312,11 +320,17 @@ export function computeBonuses(
 
   const pet = getEquippedPet(state);
   if (pet) {
-    const petLv = getPetProgress(state.petProgress, pet.id).level;
-    const mult = petLevelMultiplier(petLv);
+    const progress = getPetProgress(state.petProgress, pet.id);
+    const mult =
+      petLevelMultiplier(progress.level) * petStageMultiplier(progress.stage);
     xpPct += Math.round(pet.xpBonusPct * mult);
     coins += Math.round(pet.coinBonus * mult);
-    const extras = computePetQuestExtras(pet, questCategory, petLv);
+    const extras = computePetQuestExtras(
+      pet,
+      questCategory,
+      progress.level,
+      progress.stage,
+    );
     xpPct += extras.xpPct;
     coins += extras.coins;
   }
@@ -541,6 +555,7 @@ function rollPetLoot(ownedPets: PetId[], rarity: Rarity): ChestDrop {
 }
 
 function dropRarity(drop: ChestDrop): Rarity {
+  if (drop.kind === "evo-stone") return "enchanted";
   if (drop.kind === "gear" || drop.kind === "duplicate") {
     return GEAR_BY_ID[drop.gearId]?.rarity ?? "forged";
   }
@@ -552,6 +567,19 @@ export function rollChestLoot(
   chest: "normal" | "legendary",
   opts?: { petsUnlocked?: boolean; ownedPets?: PetId[] },
 ): LootEvent {
+  const stoneChance =
+    chest === "legendary"
+      ? EVO_STONE_CHANCE_LEGENDARY
+      : EVO_STONE_CHANCE_NORMAL;
+
+  // Rare replacement drop — Evolution Stone instead of gear/pet.
+  if (Math.random() < stoneChance) {
+    return {
+      kind: "evo-stone",
+      bonusCoins: chestBonusCoins(chest, "enchanted"),
+    };
+  }
+
   const rarity = rarityPool(chest);
   const petsUnlocked = Boolean(opts?.petsUnlocked);
   const ownedPets = opts?.ownedPets ?? [];

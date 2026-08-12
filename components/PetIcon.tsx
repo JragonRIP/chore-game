@@ -2,25 +2,33 @@
 
 import Image from "next/image";
 import { RARITY_COLORS } from "@/lib/gear";
-import { FAMILIAR_PET_IMAGES, PET_IMAGES } from "@/lib/petImages";
+import { getFamiliarPetImage, getPetImage } from "@/lib/petImages";
 import { gearPalette } from "@/lib/pixel";
-import type { FamiliarId, PetDef, PetSpecies } from "@/lib/types";
+import type { FamiliarId, PetDef, PetSpecies, PetStage } from "@/lib/types";
 
 export function PetSprite({
   species,
   familiar = null,
+  stage = 1,
   size = 64,
   className = "",
 }: {
   species: PetSpecies;
   familiar?: FamiliarId | null;
+  stage?: PetStage;
   size?: number;
   className?: string;
 }) {
-  const grounded = familiar === "caliper";
+  const grounded =
+    familiar === "caliper" ||
+    familiar === "maple" ||
+    stage >= 2;
+  const src = familiar
+    ? getFamiliarPetImage(familiar, stage)
+    : getPetImage(species, stage);
   return (
     <Image
-      src={familiar ? FAMILIAR_PET_IMAGES[familiar] : PET_IMAGES[species]}
+      src={src}
       alt=""
       width={size}
       height={size}
@@ -34,10 +42,12 @@ export function PetSprite({
 export function PetIcon({
   pet,
   familiar = null,
+  stage = 1,
   size = 48,
 }: {
   pet: PetDef;
   familiar?: FamiliarId | null;
+  stage?: PetStage;
   size?: number;
 }) {
   const border = RARITY_COLORS[pet.rarity];
@@ -64,9 +74,24 @@ export function PetIcon({
       }}
       aria-hidden
     >
-      <PetSprite species={pet.species} familiar={familiar} size={artSize} />
+      <PetSprite
+        species={pet.species}
+        familiar={familiar}
+        stage={stage}
+        size={artSize}
+      />
       {pet.rarity === "relic" && (
         <span className="absolute -right-1 -top-1 text-xs text-amber-500">★</span>
+      )}
+      {stage >= 3 && (
+        <span className="absolute bottom-0.5 left-0.5 rounded bg-ink/70 px-1 text-[8px] font-bold text-amber-200">
+          BTL
+        </span>
+      )}
+      {stage === 2 && (
+        <span className="absolute bottom-0.5 left-0.5 rounded bg-ink/70 px-1 text-[8px] font-bold text-sky-100">
+          II
+        </span>
       )}
     </div>
   );

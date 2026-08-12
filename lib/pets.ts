@@ -3,6 +3,7 @@ import type {
   PetDef,
   PetProgress,
   PetSpecies,
+  PetStage,
   QuestCategory,
   PetId,
   Rarity,
@@ -23,6 +24,13 @@ export const PET_SPECIES_LABELS: Record<PetSpecies, string> = {
   dragon: "Dragon Hatchling",
 };
 
+export const PET_STAGE_LABELS: Record<PetSpecies, Record<PetStage, string>> = {
+  lizard: { 1: "Baby Lizard", 2: "Lizard", 3: "Battle Lizard" },
+  wolf: { 1: "Wolf Pup", 2: "Wolf", 3: "Battle Wolf" },
+  lion: { 1: "Lion Cub", 2: "Lion", 3: "Battle Lion" },
+  dragon: { 1: "Dragon Hatchling", 2: "Dragon", 3: "Battle Dragon" },
+};
+
 export const PET_SPECIES_HUE: Record<PetSpecies, number> = {
   lizard: 142,
   wolf: 215,
@@ -36,6 +44,16 @@ export const PET_TRAIT_LABELS: Record<PetSpecies, string> = {
   lion: "Flat gold every quest",
   dragon: "Stronger always-on XP%",
 };
+
+/** Level required to evolve into the next stage. */
+export const EVOLVE_LEVEL: Record<1 | 2, number> = {
+  1: 5,
+  2: 10,
+};
+
+/** Chance an Evolution Stone replaces other chest loot. */
+export const EVO_STONE_CHANCE_NORMAL = 0.02;
+export const EVO_STONE_CHANCE_LEGENDARY = 0.09;
 
 /** Base always-on bonuses by rarity (premium spike vs a single gear piece). */
 const BASE_BY_RARITY: Record<
@@ -187,10 +205,11 @@ export function computePetQuestExtras(
   pet: PetDef | null | undefined,
   category: QuestCategory | undefined,
   petLevel = 1,
+  petStage: PetStage = 1,
 ): { xpPct: number; coins: number } {
   if (!pet) return { xpPct: 0, coins: 0 };
   const trait = TRAIT_BY_RARITY[pet.rarity];
-  const mult = petLevelMultiplier(petLevel);
+  const mult = petLevelMultiplier(petLevel) * petStageMultiplier(petStage);
   let xpPct = 0;
   let coins = 0;
   if (pet.species === "lizard" && category === "Cleaning") {
@@ -198,6 +217,11 @@ export function computePetQuestExtras(
   }
   if (pet.species === "wolf" && category === "Outdoor") {
     xpPct += Math.round(trait.outdoorXpPct * mult);
+  }
+  // Battle form: small always-on trait bump
+  if (petStage >= 3) {
+    xpPct += Math.round(2 * mult);
+    coins += Math.round(1 * mult);
   }
   return { xpPct, coins };
 }
@@ -216,8 +240,22 @@ export function petLevelMultiplier(level: number): number {
   return 1 + (lv - 1) * 0.08;
 }
 
+/** Bonus multiplier from evolution stage. */
+export function petStageMultiplier(stage: PetStage): number {
+  if (stage >= 3) return 1.85;
+  if (stage >= 2) return 1.35;
+  return 1;
+}
+
+export function clampPetStage(raw: unknown): PetStage {
+  const n = typeof raw === "number" ? Math.floor(raw) : 1;
+  if (n >= 3) return 3;
+  if (n >= 2) return 2;
+  return 1;
+}
+
 export function defaultPetProgress(): PetProgress {
-  return { level: 1, xp: 0 };
+  return { level: 1, xp: 0, stage: 1 };
 }
 
 export function getPetProgress(
@@ -229,7 +267,23 @@ export function getPetProgress(
   return {
     level: Math.max(1, Math.min(MAX_PET_LEVEL, Math.floor(p.level) || 1)),
     xp: Math.max(0, Math.floor(p.xp) || 0),
+    stage: clampPetStage(p.stage),
   };
+}
+
+export function canEvolvePet(
+  progress: PetProgress,
+  evolutionStones: number,
+): boolean {
+  if (progress.stage >= 3) return false;
+  if (evolutionStones < 1) return false;
+  const need = EVOLVE_LEVEL[progress.stage as 1 | 2];
+  return progress.level >= need;
+}
+
+export function nextPetStage(stage: PetStage): PetStage | null {
+  if (stage >= 3) return null;
+  return (stage + 1) as PetStage;
 }
 
 /**
@@ -268,7 +322,7 @@ export function applyPetXpGain(
   }
 
   return {
-    progress: { level, xp },
+    progress: { level, xp, stage: progress.stage },
     levelsGained,
     xpGained: gain,
   };
@@ -298,6 +352,13 @@ export function displayPetName(
 ): string {
   const n = nickname?.trim();
   return n ? n : catalogName;
+}
+
+export function petDisplayCatalogName(
+  species: PetSpecies,
+  stage: PetStage = 1,
+): string {
+  return PET_STAGE_LABELS[species][stage];
 }
 
 export function normalizePetNames(

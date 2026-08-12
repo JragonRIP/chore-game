@@ -21,10 +21,12 @@ import {
 } from "@/lib/math";
 import {
   applyPetXpGain,
+  canEvolvePet,
   defaultPetProgress,
   familiarFromName,
   getPetProgress,
   MAX_PET_LEVEL,
+  nextPetStage,
   PET_BY_ID,
 } from "@/lib/pets";
 import { PET_TREAT_BY_ID } from "@/lib/petTreats";
@@ -360,6 +362,17 @@ export function useGameState() {
           chestsOpened: s.chestsOpened + 1,
         };
       }
+      if (event.kind === "evo-stone") {
+        const gold = s.gold + bonusGold;
+        return {
+          ...s,
+          gold,
+          goldPeak: Math.max(s.goldPeak, gold),
+          evolutionStones: (s.evolutionStones ?? 0) + 1,
+          vaultChests: withoutChest,
+          chestsOpened: s.chestsOpened + 1,
+        };
+      }
       const gold = s.gold + bonusGold;
       return {
         ...s,
@@ -631,6 +644,25 @@ export function useGameState() {
     setFamiliarReveal(null);
   }, []);
 
+  const evolvePet = useCallback((petId: PetId) => {
+    setState((s) => {
+      if (!s || !s.ownedPets.includes(petId)) return s;
+      const current = getPetProgress(s.petProgress, petId);
+      const stones = s.evolutionStones ?? 0;
+      if (!canEvolvePet(current, stones)) return s;
+      const next = nextPetStage(current.stage);
+      if (!next) return s;
+      return {
+        ...s,
+        evolutionStones: stones - 1,
+        petProgress: {
+          ...s.petProgress,
+          [petId]: { ...current, stage: next },
+        },
+      };
+    });
+  }, []);
+
   const claimAchievement = useCallback((id: AchievementId) => {
     const def = ACHIEVEMENT_BY_ID[id];
     if (!def) return;
@@ -773,6 +805,7 @@ export function useGameState() {
     equipPet,
     unequipPet,
     renamePet,
+    evolvePet,
     familiarReveal,
     dismissFamiliarReveal,
     parentGrant,

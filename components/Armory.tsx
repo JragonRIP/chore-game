@@ -15,7 +15,7 @@ import { GoldCoin } from "@/components/GoldCoin";
 import { HeroSprite } from "@/components/HeroSprite";
 import { PetIcon, PetSprite } from "@/components/PetIcon";
 import { GearIcon, RarityBadge } from "@/components/PixelGearIcon";
-import { familiarFromName, PET_BY_ID } from "@/lib/pets";
+import { familiarFromName, getPetProgress, PET_BY_ID } from "@/lib/pets";
 import type { GameState, GearDef, GearId, Slot } from "@/lib/types";
 
 const LEFT_SLOTS: Slot[] = ["helmet", "chestplate", "leggings"];
@@ -54,6 +54,9 @@ export function Armory({
   const equippedPet = state.equippedPet
     ? PET_BY_ID[state.equippedPet]
     : null;
+  const equippedPetProgress = equippedPet
+    ? getPetProgress(state.petProgress, equippedPet.id)
+    : null;
 
   const slotButton = (slot: Slot | "pet") => {
     if (slot === "pet") {
@@ -67,6 +70,7 @@ export function Armory({
             <PetIcon
               pet={equippedPet}
               familiar={familiarFromName(state.petNames?.[equippedPet.id])}
+              stage={equippedPetProgress?.stage ?? 1}
               size={40}
             />
           ) : (
@@ -123,6 +127,7 @@ export function Armory({
                 <PetSprite
                   species={equippedPet.species}
                   familiar={familiarFromName(state.petNames?.[equippedPet.id])}
+                  stage={equippedPetProgress?.stage ?? 1}
                   size={56}
                 />
               </div>

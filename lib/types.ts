@@ -19,6 +19,8 @@ export type AvatarId =
 export type ChestType = "normal" | "legendary";
 export type PetSpecies = "lizard" | "wolf" | "lion" | "dragon";
 export type FamiliarId = "maple" | "caliper";
+/** 1 = baby, 2 = adult, 3 = battle form */
+export type PetStage = 1 | 2 | 3;
 export type XpBottleId = "xp-sip" | "xp-flask";
 export type PetTreatId = "treat-nibble" | "treat-feast";
 export type AchievementId =
@@ -98,6 +100,8 @@ export interface PetDef {
 export interface PetProgress {
   level: number;
   xp: number;
+  /** 1 baby → 2 adult → 3 battle. Defaults to 1. */
+  stage: PetStage;
 }
 
 export interface QuestOverride {
@@ -129,7 +133,8 @@ export type ChestDrop =
       petId: PetId;
       coinsAwarded: number;
       xpAwarded: number;
-    };
+    }
+  | { kind: "evo-stone" };
 
 export type LootEvent = ChestDrop & { bonusCoins: number };
 
@@ -193,6 +198,8 @@ export interface GameState {
   xpBottles: Record<XpBottleId, number>;
   /** Owned pet treats waiting to be fed on the Pets tab. */
   petTreats: Record<PetTreatId, number>;
+  /** Evolution stones for pet stage-ups. */
+  evolutionStones: number;
   /** Consecutive days with at least one completed quest. */
   streakDays: number;
   /** Calendar day the streak last incremented. */
