@@ -210,7 +210,9 @@ export function GameApp() {
       )}
 
       {g.openingChest &&
-        (g.chestPhase === "opening" || g.chestPhase === "reveal") &&
+        (g.chestPhase === "tap" ||
+          g.chestPhase === "opening" ||
+          g.chestPhase === "reveal") &&
         !g.celebration &&
         !g.encounter &&
         !g.evolveAnim && (
@@ -218,6 +220,7 @@ export function GameApp() {
             chest={g.openingChest}
             phase={g.chestPhase}
             loot={g.lootResult}
+            onTapChest={g.tapChest}
             onFinishOpen={g.finishOpenChest}
             onDismiss={g.dismissChest}
           />
@@ -276,7 +279,14 @@ export function GameApp() {
         !g.familiarReveal &&
         !g.evolveHint &&
         !g.evolveAnim && (
-          <DailyChestGift onDismiss={g.dismissDailyGift} />
+          <DailyChestGift
+            onOpen={() => {
+              const chest = g.dailyGift!;
+              g.dismissDailyGift();
+              g.beginOpenChest(chest);
+            }}
+            onDismiss={g.dismissDailyGift}
+          />
         )}
 
       {g.parentOpen && (

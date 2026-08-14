@@ -103,9 +103,9 @@ export function useGameState() {
   const [celebration, setCelebration] = useState<Celebration | null>(null);
   const [openingChest, setOpeningChest] = useState<VaultChest | null>(null);
   const [lootResult, setLootResult] = useState<LootEvent | null>(null);
-  const [chestPhase, setChestPhase] = useState<"idle" | "opening" | "reveal">(
-    "idle",
-  );
+  const [chestPhase, setChestPhase] = useState<
+    "idle" | "tap" | "opening" | "reveal"
+  >("idle");
   const [dailyGift, setDailyGift] = useState<VaultChest | null>(null);
   const [parentOpen, setParentOpen] = useState(false);
   const [petsUnlockOpen, setPetsUnlockOpen] = useState(false);
@@ -214,11 +214,14 @@ export function useGameState() {
     const today = todayKey();
     // Prefer disk — covers Strict Mode remounts and in-flight cloud sync.
     const disk = loadGame();
-    if (state.freeChestDate === today || disk.freeChestDate === today) {
-      if (state.freeChestDate !== today && disk.freeChestDate === today) {
-        setState((s) =>
-          s ? { ...s, freeChestDate: today } : s,
-        );
+    const hasDailyChest = [...state.vaultChests, ...disk.vaultChests].some(
+      (c) =>
+        c.reason === "Daily Wooden Chest" &&
+        todayKey(new Date(c.earnedAt)) === today,
+    );
+    if (hasDailyChest) {
+      if (state.freeChestDate !== today) {
+        setState((s) => (s ? { ...s, freeChestDate: today } : s));
       }
       return;
     }
@@ -514,6 +517,10 @@ export function useGameState() {
     pendingChestLoot.current = null;
     setOpeningChest(chest);
     setLootResult(null);
+    setChestPhase("tap");
+  }, []);
+
+  const tapChest = useCallback(() => {
     setChestPhase("opening");
   }, []);
 
@@ -1095,6 +1102,7 @@ export function useGameState() {
     lootResult,
     chestPhase,
     beginOpenChest,
+    tapChest,
     finishOpenChest,
     dismissChest,
     dailyGift,

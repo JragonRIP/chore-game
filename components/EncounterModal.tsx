@@ -19,11 +19,21 @@ export function EncounterModal({
   const [taps, setTaps] = useState(0);
   const [left, setLeft] = useState(encounter.seconds);
   const [phase, setPhase] = useState<"fight" | "won" | "lost">("fight");
+  const [claimReady, setClaimReady] = useState(false);
   const settled = useRef(false);
 
   useEffect(() => {
     playEncounter();
   }, []);
+
+  useEffect(() => {
+    if (phase !== "won") {
+      setClaimReady(false);
+      return;
+    }
+    const t = window.setTimeout(() => setClaimReady(true), 1500);
+    return () => window.clearTimeout(t);
+  }, [phase]);
 
   useEffect(() => {
     if (phase !== "fight") return;
@@ -106,17 +116,28 @@ export function EncounterModal({
 
         {phase === "won" && (
           <>
-            <p className="mt-4 font-display text-xl text-emerald-700">Victory!</p>
-            <button
-              type="button"
-              onClick={() => {
-                playClick();
-                onResolve(true);
-              }}
-              className="btn btn-primary mt-4 w-full"
-            >
-              Claim spoils
-            </button>
+            <div className="mt-6 min-h-[4.5rem]">
+              <p className="font-display text-2xl text-emerald-700 rise-in">
+                Victory!
+              </p>
+              {!claimReady && (
+                <p className="mt-2 text-sm text-ink-soft">Collecting spoils…</p>
+              )}
+            </div>
+            {claimReady ? (
+              <button
+                type="button"
+                onClick={() => {
+                  playClick();
+                  onResolve(true);
+                }}
+                className="btn btn-secondary mt-2 w-full rise-in"
+              >
+                Claim spoils
+              </button>
+            ) : (
+              <div className="mt-2 min-h-12" aria-hidden />
+            )}
           </>
         )}
 
@@ -131,7 +152,7 @@ export function EncounterModal({
                 playClick();
                 onResolve(false);
               }}
-              className="btn btn-secondary mt-4 w-full"
+              className="btn btn-ghost mt-6 w-full text-sm"
             >
               Continue
             </button>

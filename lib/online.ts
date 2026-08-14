@@ -174,6 +174,17 @@ function laterDate(
   return a >= b ? a : b;
 }
 
+/** Union chests from multiple sources — local grants must not be lost on cloud pull. */
+function mergeVaultChests(...lists: (VaultChest[] | undefined)[]): VaultChest[] {
+  const byId = new Map<string, VaultChest>();
+  for (const list of lists) {
+    for (const chest of list ?? []) {
+      if (!byId.has(chest.id)) byId.set(chest.id, chest);
+    }
+  }
+  return [...byId.values()].sort((a, b) => b.earnedAt - a.earnedAt);
+}
+
 /** First login: keep local progress if cloud is empty. */
 export async function migrateOrLoadCloudSave(
   local: GameState,
@@ -190,8 +201,18 @@ export async function migrateOrLoadCloudSave(
     laterDate(local.freeChestDate, disk.freeChestDate),
     cloud.freeChestDate,
   );
-  if (freeChestDate === cloud.freeChestDate) return cloud;
-  return { ...cloud, freeChestDate };
+  const vaultChests = mergeVaultChests(
+    cloud.vaultChests,
+    local.vaultChests,
+    disk.vaultChests,
+  );
+  if (
+    freeChestDate === cloud.freeChestDate &&
+    vaultChests.length === cloud.vaultChests.length
+  ) {
+    return cloud;
+  }
+  return { ...cloud, freeChestDate, vaultChests };
 }
 
 export async function listFriends(): Promise<FriendEntry[]> {

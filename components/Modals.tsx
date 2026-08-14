@@ -19,7 +19,9 @@ import {
 import type {
   FamiliarId,
   GameState,
+  GearId,
   LootEvent,
+  PetId,
   QuestId,
   QuestOverride,
   VaultChest,
@@ -120,31 +122,153 @@ export function CelebrationModal({
   );
 }
 
+type ChestRevealStep =
+  | { type: "gear"; gearId: GearId; duplicate: boolean }
+  | { type: "pet"; petId: PetId; duplicate: boolean }
+  | { type: "evo-stone" }
+  | { type: "gold"; amount: number }
+  | { type: "xp"; amount: number };
+
+function buildChestRevealSteps(loot: LootEvent): ChestRevealStep[] {
+  const steps: ChestRevealStep[] = [];
+
+  if (loot.kind === "gear") {
+    steps.push({ type: "gear", gearId: loot.gearId, duplicate: false });
+  } else if (loot.kind === "duplicate") {
+    steps.push({ type: "gear", gearId: loot.gearId, duplicate: true });
+    if (loot.coinsAwarded > 0) {
+      steps.push({ type: "gold", amount: loot.coinsAwarded });
+    }
+  } else if (loot.kind === "pet") {
+    steps.push({ type: "pet", petId: loot.petId, duplicate: false });
+  } else if (loot.kind === "pet-duplicate") {
+    steps.push({ type: "pet", petId: loot.petId, duplicate: true });
+    if (loot.coinsAwarded > 0) {
+      steps.push({ type: "gold", amount: loot.coinsAwarded });
+    }
+    if (loot.xpAwarded > 0) {
+      steps.push({ type: "xp", amount: loot.xpAwarded });
+    }
+  } else if (loot.kind === "evo-stone") {
+    steps.push({ type: "evo-stone" });
+  }
+
+  if (loot.bonusCoins > 0) {
+    steps.push({ type: "gold", amount: loot.bonusCoins });
+  }
+
+  return steps;
+}
+
+function LootRevealCard({
+  step,
+  flipped,
+  onTap,
+}: {
+  step: ChestRevealStep;
+  flipped: boolean;
+  onTap: () => void;
+}) {
+  const gear = step.type === "gear" ? GEAR_BY_ID[step.gearId] : null;
+  const pet = step.type === "pet" ? PET_BY_ID[step.petId] : null;
+
+  return (
+    <button
+      type="button"
+      onClick={onTap}
+      className="loot-card-scene mx-auto mt-4"
+      aria-label={flipped ? "Next reward" : "Reveal reward"}
+    >
+      <div className={`loot-card ${flipped ? "loot-card-flipped" : ""}`}>
+        <div className="loot-card-face loot-card-back">
+          <span className="text-3xl">✨</span>
+          <p className="mt-2 text-xs font-bold text-white/90">Tap</p>
+        </div>
+        <div className="loot-card-face loot-card-front">
+          {step.type === "gear" && gear && (
+            <>
+              <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-700">
+                {step.duplicate ? "Duplicate Gear" : "New Gear!"}
+              </p>
+              <GearIcon gear={gear} size={72} />
+              <p className="mt-1 font-display text-base text-ink">{gear.name}</p>
+              {!step.duplicate && <RarityBadge rarity={gear.rarity} />}
+            </>
+          )}
+          {step.type === "pet" && pet && (
+            <>
+              <p className="text-[10px] font-bold uppercase tracking-wide text-teal-deep">
+                {step.duplicate ? "Duplicate Pet" : "New Companion!"}
+              </p>
+              <PetIcon pet={pet} size={72} />
+              <p className="mt-1 font-display text-base text-ink">{pet.name}</p>
+              {!step.duplicate && <RarityBadge rarity={pet.rarity} />}
+            </>
+          )}
+          {step.type === "evo-stone" && (
+            <>
+              <p className="text-[10px] font-bold uppercase tracking-wide text-violet-700">
+                Rare Find!
+              </p>
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-100 to-amber-50 text-4xl">
+                💎
+              </div>
+              <p className="mt-1 font-display text-base text-ink">
+                Evolution Stone
+              </p>
+            </>
+          )}
+          {step.type === "gold" && (
+            <>
+              <p className="text-[10px] font-bold uppercase tracking-wide text-amber-700">
+                Gold!
+              </p>
+              <GoldCoin size={56} />
+              <p className="mt-2 font-display text-2xl text-amber-800">
+                +{step.amount}
+              </p>
+            </>
+          )}
+          {step.type === "xp" && (
+            <>
+              <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-700">
+                Experience!
+              </p>
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-400 font-display text-xl text-white">
+                XP
+              </div>
+              <p className="mt-2 font-display text-2xl text-emerald-700">
+                +{step.amount}
+              </p>
+            </>
+          )}
+        </div>
+      </div>
+    </button>
+  );
+}
+
 export function ChestOpenModal({
   chest,
   phase,
   loot,
+  onTapChest,
   onFinishOpen,
   onDismiss,
 }: {
   chest: VaultChest;
-  phase: "opening" | "reveal";
+  phase: "tap" | "opening" | "reveal";
   loot: LootEvent | null;
+  onTapChest: () => void;
   onFinishOpen: () => void;
   onDismiss: () => void;
 }) {
-  const gear =
-    loot && (loot.kind === "gear" || loot.kind === "duplicate")
-      ? GEAR_BY_ID[loot.gearId]
-      : null;
-  const pet =
-    loot && (loot.kind === "pet" || loot.kind === "pet-duplicate")
-      ? PET_BY_ID[loot.petId]
-      : null;
   const crystal = chest.type === "crystal";
   const legendary = chest.type === "legendary";
   const openMs = crystal ? 2000 : legendary ? 1600 : 900;
+  const [stepIndex, setStepIndex] = useState(0);
   const [cardFlipped, setCardFlipped] = useState(false);
+  const steps = loot ? buildChestRevealSteps(loot) : [];
 
   useEffect(() => {
     if (phase !== "opening") return;
@@ -155,12 +279,8 @@ export function ChestOpenModal({
 
   useEffect(() => {
     if (phase !== "reveal" || !loot) return;
+    setStepIndex(0);
     setCardFlipped(false);
-    const t = window.setTimeout(() => {
-      setCardFlipped(true);
-      playFanfare();
-    }, 450);
-    return () => window.clearTimeout(t);
   }, [phase, loot]);
 
   const openClass = crystal
@@ -169,9 +289,63 @@ export function ChestOpenModal({
       ? "bg-gradient-to-br from-amber-200 to-yellow-100 chest-open-legendary"
       : "bg-amber-50 chest-open-wooden";
 
+  const currentStep = steps[stepIndex];
+  const isLastStep = stepIndex >= steps.length - 1;
+
+  const handleRevealTap = () => {
+    if (!currentStep) {
+      onDismiss();
+      return;
+    }
+    if (!cardFlipped) {
+      setCardFlipped(true);
+      playFanfare();
+      return;
+    }
+    if (isLastStep) {
+      playClick();
+      onDismiss();
+      return;
+    }
+    playClick();
+    setStepIndex((i) => i + 1);
+    setCardFlipped(false);
+  };
+
+  const stepHint = !currentStep
+    ? ""
+    : !cardFlipped
+      ? "Tap the card to reveal!"
+      : isLastStep
+        ? "Tap to collect everything!"
+        : "Tap for the next reward!";
+
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/45 p-4 backdrop-blur-sm sm:items-center">
       <div className="surface-strong w-full max-w-sm p-5 text-center rise-in">
+        {phase === "tap" && (
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                playClick();
+                onTapChest();
+              }}
+              className={`mx-auto flex h-36 w-36 items-center justify-center rounded-3xl transition active:scale-95 ${openClass}`}
+              aria-label="Tap to open chest"
+            >
+              <ChestIcon variant={chestIconVariant(chest.type)} size={110} />
+            </button>
+            <h3 className="mt-4 font-display text-xl text-ink">
+              {chestLabel(chest.type)}
+            </h3>
+            <p className="mt-2 text-sm font-semibold text-teal-deep">
+              Tap the chest to open!
+            </p>
+            <p className="mt-1 text-xs text-ink-soft">{chest.reason}</p>
+          </>
+        )}
+
         {phase === "opening" && (
           <>
             <div
@@ -182,123 +356,20 @@ export function ChestOpenModal({
             <h3 className="mt-4 font-display text-xl text-ink">
               Opening {chestLabel(chest.type)}…
             </h3>
-            <p className="mt-2 text-sm text-ink-soft">{chest.reason}</p>
           </>
         )}
 
-        {phase === "reveal" && loot && (
+        {phase === "reveal" && loot && currentStep && (
           <>
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-teal-deep">
-              Loot Card
+              {stepIndex + 1} of {steps.length}
             </p>
-            <button
-              type="button"
-              onClick={() => {
-                if (!cardFlipped) {
-                  setCardFlipped(true);
-                  playFanfare();
-                }
-              }}
-              className="loot-card-scene mx-auto mt-4"
-              aria-label="Reveal loot card"
-            >
-              <div
-                className={`loot-card ${cardFlipped ? "loot-card-flipped" : ""}`}
-              >
-                <div className="loot-card-face loot-card-back">
-                  <ChestIcon
-                    variant={chestIconVariant(chest.type)}
-                    size={72}
-                  />
-                  <p className="mt-2 text-xs font-bold text-white/90">Tap</p>
-                </div>
-                <div className="loot-card-face loot-card-front">
-                  {loot.kind === "duplicate" && (
-                    <>
-                      <p className="text-[10px] font-bold uppercase tracking-wide text-amber-700">
-                        Duplicate
-                      </p>
-                      {gear && <GearIcon gear={gear} size={64} />}
-                      <p className="mt-1 text-sm font-semibold text-ink">
-                        {gear?.name}
-                      </p>
-                      <div className="mt-1 flex items-center justify-center gap-1 font-display text-lg text-amber-800">
-                        <GoldCoin size={18} />+{loot.coinsAwarded}
-                      </div>
-                    </>
-                  )}
-                  {loot.kind === "gear" && gear && (
-                    <>
-                      <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-700">
-                        New Gear!
-                      </p>
-                      <GearIcon gear={gear} size={72} />
-                      <p className="mt-1 font-display text-base text-ink">
-                        {gear.name}
-                      </p>
-                      <RarityBadge rarity={gear.rarity} />
-                    </>
-                  )}
-                  {loot.kind === "pet" && pet && (
-                    <>
-                      <p className="text-[10px] font-bold uppercase tracking-wide text-teal-deep">
-                        New Companion!
-                      </p>
-                      <PetIcon pet={pet} size={72} />
-                      <p className="mt-1 font-display text-base text-ink">
-                        {pet.name}
-                      </p>
-                      <RarityBadge rarity={pet.rarity} />
-                    </>
-                  )}
-                  {loot.kind === "pet-duplicate" && (
-                    <>
-                      <p className="text-[10px] font-bold uppercase tracking-wide text-amber-700">
-                        Duplicate Pet
-                      </p>
-                      {pet && <PetIcon pet={pet} size={64} />}
-                      <div className="mt-1 flex flex-col items-center gap-0.5 font-display text-base text-amber-800">
-                        <span className="inline-flex items-center gap-1">
-                          <GoldCoin size={16} />+{loot.coinsAwarded}
-                        </span>
-                        <span className="text-sm text-emerald-700">
-                          +{loot.xpAwarded} XP
-                        </span>
-                      </div>
-                    </>
-                  )}
-                  {loot.kind === "evo-stone" && (
-                    <>
-                      <p className="text-[10px] font-bold uppercase tracking-wide text-violet-700">
-                        Rare Find!
-                      </p>
-                      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-100 to-amber-50 text-4xl">
-                        💎
-                      </div>
-                      <p className="mt-1 font-display text-base text-ink">
-                        Evolution Stone
-                      </p>
-                    </>
-                  )}
-                </div>
-              </div>
-            </button>
-            {cardFlipped && loot.bonusCoins > 0 && (
-              <div className="mt-3 flex items-center justify-center gap-1.5 text-sm font-bold text-amber-800">
-                <GoldCoin size={16} />+{loot.bonusCoins} chest gold
-              </div>
-            )}
-            <button
-              type="button"
-              disabled={!cardFlipped}
-              onClick={() => {
-                playClick();
-                onDismiss();
-              }}
-              className="btn btn-primary pointer-events-auto mt-5 w-full disabled:opacity-40"
-            >
-              Claim
-            </button>
+            <LootRevealCard
+              step={currentStep}
+              flipped={cardFlipped}
+              onTap={handleRevealTap}
+            />
+            <p className="mt-3 text-sm font-semibold text-ink-soft">{stepHint}</p>
           </>
         )}
       </div>
@@ -395,8 +466,10 @@ export function PetsUnlockModal({ onDismiss }: { onDismiss: () => void }) {
 }
 
 export function DailyChestGift({
+  onOpen,
   onDismiss,
 }: {
+  onOpen: () => void;
   onDismiss: () => void;
 }) {
   return (
@@ -407,18 +480,27 @@ export function DailyChestGift({
         </div>
         <h3 className="mt-4 font-display text-2xl text-ink">Daily Gift!</h3>
         <p className="mt-2 text-sm text-ink-soft">
-          A free Wooden Chest was added to your Vault. Open it whenever
-          you&apos;re ready!
+          Your free Wooden Chest is ready — tap to open it now!
         </p>
+        <button
+          type="button"
+          onClick={() => {
+            playClick();
+            onOpen();
+          }}
+          className="btn btn-primary mt-5 w-full"
+        >
+          Open chest!
+        </button>
         <button
           type="button"
           onClick={() => {
             playClick();
             onDismiss();
           }}
-          className="btn btn-primary mt-5 w-full"
+          className="btn btn-ghost mt-2 w-full text-sm"
         >
-          Awesome!
+          Save for later
         </button>
       </div>
     </div>
